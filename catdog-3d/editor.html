@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CAT DOG BOUQUET — 3D редактор трансформації</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f1012}
+#app{position:fixed;inset:0}
+.panel{position:fixed;z-index:10;background:rgba(18,20,24,.9);backdrop-filter:blur(12px);border:1px solid #333;border-radius:14px}
+#left{left:12px;top:12px;width:360px;padding:12px}
+#bottom{left:12px;right:12px;bottom:12px;padding:10px 12px}
+h1{font-size:16px;margin:0 0 8px}
+.small{font-size:11px;color:#bbb;line-height:1.35}
+.row{display:flex;align-items:center;gap:7px;margin:7px 0}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+button,select,input{font:inherit}
+button{background:#24272c;color:#eee;border:1px solid #3d4148;border-radius:9px;padding:8px;cursor:pointer}
+button:hover{background:#30343b}
+button.active{background:#e8e2d8;color:#111;border-color:#e8e2d8}
+select{width:100%;background:#1b1e22;color:#eee;border:1px solid #3b3e44;border-radius:8px;padding:7px}
+input[type=range]{width:100%}
+#frame{font-variant-numeric:tabular-nums;min-width:54px;text-align:right}
+#stage{font-weight:700}
+#hint{margin-top:8px;padding-top:8px;border-top:1px solid #333}
+kbd{background:#292c31;border:1px solid #444;border-radius:5px;padding:1px 5px;font-size:10px}
+@media(max-width:760px){#left{width:calc(100vw - 24px)}#bottom{left:8px;right:8px;bottom:8px}.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="left" class="panel">
+  <h1>CAT ↔ DOG ↔ BOUQUET — 3D редактор</h1>
+  <div class="small">Клікни по деталі — з’явиться гізмо. Деталь можна рухати, крутити й масштабувати. Анімацію можна програвати або гортати покадрово.</div>
+
+  <div class="row"><select id="partSelect"></select></div>
+  <div class="grid">
+    <button id="moveBtn" class="active">Рухати <kbd>W</kbd></button>
+    <button id="rotateBtn">Крутити <kbd>E</kbd></button>
+    <button id="scaleBtn">Масштаб <kbd>R</kbd></button>
+    <button id="resetPartBtn">Скинути деталь</button>
+  </div>
+
+  <div class="row">
+    <label><input id="localChk" type="checkbox"> локальні осі</label>
+    <label><input id="seamsChk" type="checkbox" checked> строчки</label>
+    <label><input id="xrayChk" type="checkbox"> рентген</label>
+  </div>
+
+  <div class="grid">
+    <button data-jump="0">Розкладка</button>
+    <button data-jump="90">Кіт</button>
+    <button data-jump="180">Собака</button>
+    <button data-jump="270">Букет</button>
+  </div>
+
+  <div id="hint" class="small">
+    <b>Логіка:</b> 0–90 — складання в кицю; 90–180 — перебудова в собаку; 180–270 — складання в букет. Нічого не “телепортується”: приховані голови й лапи фізично переходять під/за корпус.
+  </div>
+</div>
+
+<div id="bottom" class="panel">
+  <div class="row">
+    <button id="reverseBtn">◀ Розкладати</button>
+    <button id="pauseBtn">Ⅱ</button>
+    <button id="forwardBtn">Складати ▶</button>
+    <button id="prevBtn">−1 кадр</button>
+    <button id="nextBtn">+1 кадр</button>
+    <select id="speedSel" style="width:88px">
+      <option value=".25">0.25×</option>
+      <option value=".5">0.5×</option>
+      <option value="1" selected>1×</option>
+      <option value="2">2×</option>
+    </select>
+    <span id="stage">РОЗКЛАДКА</span>
+    <span id="frame">0 / 270</span>
+  </div>
+  <input id="timeline" type="range" min="0" max="270" step="1" value="0">
+</div>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const app=document.querySelector('#app');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x101114);
+
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,200);
+camera.position.set(10,7,13);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true;
+orbit.target.set(0,.4,0);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x34313a,2.2));
+const key=new THREE.DirectionalLight(0xffffff,3.2);
+key.position.set(7,12,9); key.castShadow=true; scene.add(key);
+
+const floor=new THREE.Mesh(
+  new THREE.PlaneGeometry(40,40),
+  new THREE.MeshStandardMaterial({color:0x17191d,roughness:1})
+);
+floor.rotation.x=-Math.PI/2; floor.position.y=-2.35; floor.receiveShadow=true; scene.add(floor);
+const grid=new THREE.GridHelper(30,30,0x353942,0x24272d); grid.position.y=-2.34; scene.add(grid);
+
+const COLORS={milk:0xe9dfce,choco:0x604034,sage:0x89927d,rose:0xb98388,dark:0x2b2020};
+const model=new THREE.Group(); scene.add(model);
+
+function material(color){
+  return new THREE.MeshStandardMaterial({color,roughness:.78,metalness:0});
+}
+function markPart(obj,id){
+  obj.traverse(o=>{ if(o.isMesh) o.userData.partId=id; });
+}
+function rounded(w,h,d,color,r=.18){
+  const m=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,5,r),material(color));
+  m.castShadow=true; m.receiveShadow=true; return m;
+}
+function sphere(r,color,sx=1,sy=1,sz=1){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,32,20),material(color));
+  m.scale.set(sx,sy,sz); m.castShadow=true; return m;
+}
+function makeHead(kind){
+  const g=new THREE.Group();
+  const c=kind==='cat'?COLORS.milk:COLORS.choco;
+  const head=sphere(.72,c,1.05,.92,.92); g.add(head);
+  if(kind==='cat'){
+    for(const x of [-.46,.46]){
+      const geo=new THREE.ConeGeometry(.30,.72,3);
+      const ear=new THREE.Mesh(geo,material(c));
+      ear.position.set(x,.63,0); ear.rotation.z=x<0?.12:-.12; g.add(ear);
+    }
+  }else{
+    for(const x of [-.62,.62]){
+      const ear=sphere(.28,c,.72,1.55,.35);
+      ear.position.set(x,.04,0); ear.rotation.z=x<0?.4:-.4; g.add(ear);
+    }
+  }
+  const eyeMat=material(0x151515);
+  for(const x of [-.22,.22]){
+    const e=new THREE.Mesh(new THREE.SphereGeometry(.07,16,12),eyeMat);
+    e.position.set(x,.1,.66); g.add(e);
+  }
+  const nose=sphere(.09,kind==='cat'?0x8a5d61:0x171717);
+  nose.position.set(0,-.12,.70); g.add(nose);
+  return g;
+}
+function makeBody(){
+  const g=new THREE.Group();
+  for(let i=0;i<7;i++){
+    const rib=rounded(.64,2.4,.56,COLORS.milk,.24);
+    rib.position.x=(i-3)*.58;
+    rib.userData.isSeamBody=true;
+    g.add(rib);
+  }
+  return g;
+}
+function makeTail(){
+  const g=new THREE.Group();
+  const segs=[];
+  for(let i=0;i<9;i++){
+    const seg=rounded(.48,.72,.48,COLORS.milk,.23);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.255,.025,8,28),material(COLORS.rose));
+    ring.rotation.x=Math.PI/2;
+    seg.add(ring); ring.userData.isSeam=true;
+    g.add(seg); segs.push(seg);
+  }
+  g.userData.tailSegments=segs;
+  return g;
+}
+function makeLeg(color){
+  const g=new THREE.Group();
+  const a=rounded(.48,1.15,.52,color,.22); a.position.y=-.2; g.add(a);
+  const paw=rounded(.62,.42,.65,color,.21); paw.position.y=-.78; paw.position.z=.08; g.add(paw);
+  return g;
+}
+function makeWrap(side){
+  const m=rounded(1.55,2.7,.18,COLORS.sage,.12);
+  m.rotation.z=side<0?-.22:.22;
+  return m;
+}
+function makeBud(color){
+  const g=new THREE.Group();
+  for(let i=0;i<6;i++){
+    const p=rounded(.42,.95,.34,color,.2);
+    const a=i/6*Math.PI*2;
+    p.position.set(Math.cos(a)*.32,Math.sin(a)*.32,0);
+    p.rotation.z=a;
+    g.add(p);
+  }
+  return g;
+}
+
+const defs=[
+  ['body','Корпус',makeBody()],
+  ['catHead','Голова киці',makeHead('cat')],
+  ['dogHead','Голова собаки',makeHead('dog')],
+  ['tail','Хвіст киці',makeTail()],
+  ['frontL','Передня лапа L',makeLeg(COLORS.milk)],
+  ['frontR','Передня лапа R',makeLeg(COLORS.milk)],
+  ['rearL','Задня лапа L',makeLeg(COLORS.choco)],
+  ['rearR','Задня лапа R',makeLeg(COLORS.choco)],
+  ['wrapL','Обгортка L',makeWrap(-1)],
+  ['wrapR','Обгортка R',makeWrap(1)],
+  ['bud2','Бутон 2',makeBud(COLORS.rose)],
+  ['bud3','Бутон 3',makeBud(COLORS.sage)]
+];
+
+const parts={};
+for(const [id,label,visual] of defs){
+  const anim=new THREE.Group();
+  const manual=new THREE.Group();
+  anim.add(manual); manual.add(visual); model.add(anim);
+  markPart(visual,id);
+  parts[id]={id,label,anim,manual,visual};
+}
+
+const select=document.querySelector('#partSelect');
+for(const p of Object.values(parts)){
+  const o=document.createElement('option'); o.value=p.id; o.textContent=p.label; select.appendChild(o);
+}
+
+const tctrl=new TransformControls(camera,renderer.domElement);
+scene.add(tctrl);
+tctrl.setMode('translate');
+tctrl.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);
+
+function resetManual(id){
+  const m=parts[id].manual;
+  m.position.set(0,0,0); m.rotation.set(0,0,0); m.scale.set(1,1,1);
+}
+let selected='body';
+function selectPart(id){
+  selected=id; select.value=id; tctrl.attach(parts[id].manual);
+}
+selectPart(selected);
+select.addEventListener('change',()=>selectPart(select.value));
+
+function setTool(mode){
+  tctrl.setMode(mode);
+  document.querySelector('#moveBtn').classList.toggle('active',mode==='translate');
+  document.querySelector('#rotateBtn').classList.toggle('active',mode==='rotate');
+  document.querySelector('#scaleBtn').classList.toggle('active',mode==='scale');
+}
+document.querySelector('#moveBtn').onclick=()=>setTool('translate');
+document.querySelector('#rotateBtn').onclick=()=>setTool('rotate');
+document.querySelector('#scaleBtn').onclick=()=>setTool('scale');
+document.querySelector('#resetPartBtn').onclick=()=>resetManual(selected);
+document.querySelector('#localChk').onchange=e=>tctrl.setSpace(e.target.checked?'local':'world');
+
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown',e=>{
+  if(tctrl.dragging) return;
+  mouse.x=e.clientX/innerWidth*2-1; mouse.y=-(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse,camera);
+  const hit=ray.intersectObjects(model.children,true).find(h=>h.object.userData.partId);
+  if(hit) selectPart(hit.object.userData.partId);
+});
+
+const poses={
+body:[
+  [[0,0,0],[0,0,0],[1.1,1,1]],
+  [[0,.05,0],[0,0,0],[1.18,.95,1]],
+  [[-.25,.0,0],[0,0,-90],[1.35,.82,1]],
+  [[0,-.25,0],[0,0,0],[.72,1.35,.82]]
+],
+catHead:[
+  [[-4.0,1.0,0],[0,0,0],[1,1,1]],
+  [[1.65,.9,.35],[0,0,0],[1,1,1]],
+  [[.95,-.95,-.45],[82,0,12],[.82,.82,.82]],
+  [[-1.15,2.2,.25],[0,0,-8],[.82,.82,.82]]
+],
+dogHead:[
+  [[4.0,1.0,0],[0,0,0],[1,1,1]],
+  [[-.85,-1.2,-.5],[85,0,-10],[.78,.78,.78]],
+  [[2.05,.58,.25],[0,0,0],[1,1,1]],
+  [[1.2,2.05,.20],[0,0,8],[.82,.82,.82]]
+],
+tail:[
+  [[0,-1.5,0],[0,0,0],[1,1,1]],
+  [[-1.9,.25,.0],[0,0,0],[1,1,1]],
+  [[-2.1,.15,-.25],[0,0,8],[.9,.9,.9]],
+  [[0,1.7,-.25],[0,0,0],[.82,.82,.82]]
+],
+frontL:[
+  [[-3,-.5,0],[0,0,90],[1,1,1]],
+  [[.75,-1.05,.35],[0,0,8],[.9,.9,.9]],
+  [[.75,-1.05,.25],[0,0,3],[.92,.92,.92]],
+  [[-1.65,.55,-.2],[75,0,-55],[.72,.72,.72]]
+],
+frontR:[
+  [[-1.9,-.5,0],[0,0,90],[1,1,1]],
+  [[1.7,-.95,.25],[0,0,-5],[.9,.9,.9]],
+  [[1.75,-1.0,.15],[0,0,-2],[.92,.92,.92]],
+  [[1.65,.50,-.25],[75,0,55],[.72,.72,.72]]
+],
+rearL:[
+  [[2.0,-.5,0],[0,0,90],[1,1,1]],
+  [[-1.45,-.95,-.1],[0,0,8],[.85,.85,.85]],
+  [[-1.25,-1.0,.10],[0,0,5],[.95,.95,.95]],
+  [[-.85,-.2,-.6],[90,0,-20],[.68,.68,.68]]
+],
+rearR:[
+  [[3.1,-.5,0],[0,0,90],[1,1,1]],
+  [[-2.15,-.85,-.15],[0,0,-8],[.85,.85,.85]],
+  [[-.35,-1.0,.05],[0,0,-5],[.95,.95,.95]],
+  [[.85,-.2,-.65],[90,0,20],[.68,.68,.68]]
+],
+wrapL:[
+  [[-4,-1.9,.2],[0,0,0],[1,1,1]],
+  [[-1.0,-.2,-1.0],[0,0,82],[.55,.55,.55]],
+  [[-.5,-.35,-1.1],[0,0,80],[.55,.55,.55]],
+  [[-.82,-.2,-.05],[0,0,-22],[1.15,1.15,1.15]]
+],
+wrapR:[
+  [[4,-1.9,.2],[0,0,0],[1,1,1]],
+  [[1.0,-.2,-1.0],[0,0,-82],[.55,.55,.55]],
+  [[.5,-.35,-1.1],[0,0,-80],[.55,.55,.55]],
+  [[.82,-.2,-.05],[0,0,22],[1.15,1.15,1.15]]
+],
+bud2:[
+  [[-1.0,-2.5,-.4],[0,0,0],[.7,.7,.7]],
+  [[-.8,-1.4,-.8],[70,0,0],[.55,.55,.55]],
+  [[-.8,-1.45,-.8],[70,0,0],[.55,.55,.55]],
+  [[-.55,1.25,.35],[0,0,-12],[.85,.85,.85]]
+],
+bud3:[
+  [[1.0,-2.5,-.4],[0,0,0],[.7,.7,.7]],
+  [[.8,-1.4,-.8],[70,0,0],[.55,.55,.55]],
+  [[.8,-1.45,-.8],[70,0,0],[.55,.55,.55]],
+  [[.55,1.15,.25],[0,0,12],[.85,.85,.85]]
+]
+};
+
+const tailShapes=[
+  [[-3,0,0],[-2.25,0,0],[-1.5,0,0],[-.75,0,0],[0,0,0],[.75,0,0],[1.5,0,0],[2.25,0,0],[3,0,0]],
+  [[0,0,0],[-.55,.35,.05],[-.95,.8,.1],[-1.05,1.35,.05],[-.75,1.82,-.05],[-.25,2.0,-.1],[.25,1.82,-.15],[.55,1.45,-.12],[.65,1.08,-.08]],
+  [[0,0,0],[-.55,.25,.05],[-.95,.55,.08],[-1.2,.9,.08],[-1.15,1.28,.04],[-.85,1.55,0],[-.5,1.62,-.02],[-.22,1.5,-.03],[-.05,1.25,-.02]],
+  [[0,0,0],[.45,.05,.03],[.75,.28,.05],[.78,.65,.08],[.48,.92,.10],[.05,.98,.12],[-.28,.72,.14],[-.30,.35,.16],[-.05,.18,.18]]
+];
+
+function deg(v){return v*Math.PI/180}
+function qFromRot(r){return new THREE.Quaternion().setFromEuler(new THREE.Euler(deg(r[0]),deg(r[1]),deg(r[2]),'XYZ'))}
+function applyPose(root,a,b,t){
+  const pa=new THREE.Vector3(...a[0]), pb=new THREE.Vector3(...b[0]);
+  root.position.lerpVectors(pa,pb,t);
+  const qa=qFromRot(a[1]), qb=qFromRot(b[1]); root.quaternion.copy(qa).slerp(qb,t);
+  const sa=new THREE.Vector3(...a[2]), sb=new THREE.Vector3(...b[2]);
+  root.scale.lerpVectors(sa,sb,t);
+}
+function lerpPoint(a,b,t){return new THREE.Vector3(
+  THREE.MathUtils.lerp(a[0],b[0],t),
+  THREE.MathUtils.lerp(a[1],b[1],t),
+  THREE.MathUtils.lerp(a[2],b[2],t)
+)}
+function setTailShape(stageA,stageB,t){
+  const segs=parts.tail.visual.userData.tailSegments;
+  const pts=[];
+  for(let i=0;i<9;i++) pts.push(lerpPoint(tailShapes[stageA][i],tailShapes[stageB][i],t));
+  for(let i=0;i<9;i++){
+    const prev=pts[Math.max(0,i-1)], next=pts[Math.min(8,i+1)];
+    const dir=next.clone().sub(prev).normalize();
+    segs[i].position.copy(pts[i]);
+    segs[i].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+  }
+}
+
+const timeline=document.querySelector('#timeline');
+const frameEl=document.querySelector('#frame');
+const stageEl=document.querySelector('#stage');
+let frame=0,playDir=0,lastT=performance.now();
+
+function stageInfo(f){
+  if(f<=90) return [0,1,f/90,'РОЗКЛАДКА → КІТ'];
+  if(f<=180) return [1,2,(f-90)/90,'КІТ → СОБАКА'];
+  return [2,3,(f-180)/90,'СОБАКА → БУКЕТ'];
+}
+function setFrame(v){
+  frame=THREE.MathUtils.clamp(Math.round(v),0,270);
+  timeline.value=frame;
+  const [a,b,t,label]=stageInfo(frame);
+  for(const [id,p] of Object.entries(parts)) applyPose(p.anim,poses[id][a],poses[id][b],t);
+  setTailShape(a,b,t);
+  frameEl.textContent=`${frame} / 270`;
+  if(frame===0) stageEl.textContent='РОЗКЛАДКА';
+  else if(frame===90) stageEl.textContent='КІТ';
+  else if(frame===180) stageEl.textContent='СОБАКА';
+  else if(frame===270) stageEl.textContent='БУКЕТ';
+  else stageEl.textContent=label;
+}
+timeline.addEventListener('input',()=>{playDir=0;setFrame(+timeline.value)});
+
+document.querySelector('#forwardBtn').onclick=()=>playDir=1;
+document.querySelector('#reverseBtn').onclick=()=>playDir=-1;
+document.querySelector('#pauseBtn').onclick=()=>playDir=0;
+document.querySelector('#prevBtn').onclick=()=>{playDir=0;setFrame(frame-1)};
+document.querySelector('#nextBtn').onclick=()=>{playDir=0;setFrame(frame+1)};
+document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{playDir=0;setFrame(+b.dataset.jump)});
+document.querySelector('#seamsChk').onchange=e=>{
+  model.traverse(o=>{if(o.userData.isSeam)o.visible=e.target.checked});
+};
+document.querySelector('#xrayChk').onchange=e=>{
+  const on=e.target.checked;
+  model.traverse(o=>{
+    if(o.isMesh && o.material){
+      o.material.transparent=on;
+      o.material.opacity=on?.55:1;
+      o.material.depthWrite=!on;
+    }
+  });
+};
+
+addEventListener('keydown',e=>{
+  if(e.target.matches('input,select')) return;
+  if(e.key.toLowerCase()==='w') setTool('translate');
+  if(e.key.toLowerCase()==='e') setTool('rotate');
+  if(e.key.toLowerCase()==='r') setTool('scale');
+  if(e.key==='ArrowLeft'){playDir=0;setFrame(frame-1)}
+  if(e.key==='ArrowRight'){playDir=0;setFrame(frame+1)}
+  if(e.key===' '){e.preventDefault();playDir=playDir?0:1}
+});
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight);
+});
+
+setFrame(0);
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt=Math.min((now-lastT)/1000,.05); lastT=now;
+  if(playDir){
+    const speed=+document.querySelector('#speedSel').value;
+    const next=frame+playDir*30*speed*dt;
+    if(next<=0){setFrame(0);playDir=0}
+    else if(next>=270){setFrame(270);playDir=0}
+    else setFrame(next);
+  }
+  orbit.update();
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
