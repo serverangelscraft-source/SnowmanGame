@@ -3,6 +3,7 @@ package com.snowmangame;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Build;
+import android.os.SystemClock;
 import android.os.Vibrator;
 import android.os.VibrationEffect;
 import android.content.Context;
@@ -18,10 +19,8 @@ import java.util.Iterator;
 import java.util.Random;
 
 public class MainActivity extends Activity {
-    @Override
-    public void onCreate(Bundle b) {
+    @Override public void onCreate(Bundle b) {
         super.onCreate(b);
-
         Window window = getWindow();
         if (Build.VERSION.SDK_INT >= 21) {
             window.setStatusBarColor(Color.TRANSPARENT);
@@ -31,794 +30,168 @@ public class MainActivity extends Activity {
             window.getDecorView().setSystemUiVisibility(flags);
         }
         if (Build.VERSION.SDK_INT >= 29) window.setNavigationBarContrastEnforced(false);
-
         setContentView(new SnowmanView(this));
     }
 
     static class SnowmanView extends View {
-        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Random rnd = new Random();
-        private final ArrayList<Dust> dust = new ArrayList<>();
+        static final int EYES=0, NOSE=1, BUTTONS=2, SCARF=3, HAT=4, ARMS=5, ACCESSORY_COUNT=6;
+        final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG), text=new Paint(Paint.ANTI_ALIAS_FLAG), stroke=new Paint(Paint.ANTI_ALIAS_FLAG);
+        final Random rnd=new Random();
+        final ArrayList<Dust> dust=new ArrayList<>();
+        final Accessory[] accessories=new Accessory[ACCESSORY_COUNT];
+        final float density, textScale;
+        final Vibrator vib;
+        final SharedPreferences prefs;
 
-        private final float density;
-        private final float textScale;
-        private final Vibrator vib;
-        private final SharedPreferences prefs;
+        float safeTop, safeBottom;
+        boolean compact, narrow, finished;
+        int balls, score, bestScore, qualitySum, decorQualitySum, decorPlaced, combo, maxCombo;
+        String tip="Коти сніг пальцем — зроби першу кулю";
 
-        private float safeTop = 0f;
-        private float safeBottom = 0f;
+        float rollProgress, rollX=Float.NaN, rollY=Float.NaN, lastX, lastY, lastDx, lastDy, turnPenalty;
+        boolean rolling, draggingBall, ballReady;
+        int draggingAccessory=-1;
+        float dragAccessoryX, dragAccessoryY;
 
-        // Game state
-        private int balls = 0;
-        private int score = 0;
-        private int bestScore = 0;
-        private int qualitySum = 0;
-        private boolean face = false;
-        private boolean dressed = false;
-        private boolean finished = false;
-        private String tip = "Проведи пальцем по снігу — куля почне рости";
+        long startTime;
+        int finishElapsed, mission;
+        boolean missionSuccess;
 
-        // Current snowball rolling / dragging state
-        private float rollProgress = 0f;
-        private float rollX = Float.NaN;
-        private float rollY = Float.NaN;
-        private float lastX = 0f;
-        private float lastY = 0f;
-        private float lastDx = 0f;
-        private float lastDy = 0f;
-        private float turnPenalty = 0f;
-        private boolean rolling = false;
-        private boolean draggingBall = false;
-        private boolean ballReady = false;
-
-        // Responsive layout geometry
-        private final RectF hudRect = new RectF();
-        private final RectF tipRect = new RectF();
-        private final RectF rollZone = new RectF();
-        private final RectF controlsRect = new RectF();
-        private final RectF statusBtn = new RectF();
-        private final RectF faceBtn = new RectF();
-        private final RectF dressBtn = new RectF();
-        private final RectF finishBtn = new RectF();
-        private final RectF restartBtn = new RectF();
-
-        private float playTop;
-        private float playBottom;
-        private float baseR, midR, headR;
-        private float baseY, midY, headY;
-        private float targetX, targetY, targetR;
-        private boolean compact = false;
-        private boolean narrow = false;
+        final RectF hudRect=new RectF(), tipRect=new RectF(), interactionRect=new RectF(), finishBtn=new RectF(), restartBtn=new RectF();
+        float playTop, playBottom, baseR, midR, headR, baseY, midY, headY, targetX, targetY, targetR;
 
         SnowmanView(Context c) {
             super(c);
-            density = getResources().getDisplayMetrics().density;
-            float systemScaled = getResources().getDisplayMetrics().scaledDensity;
-            // Keep accessibility scaling, but cap it so canvas labels cannot collide on phones.
-            textScale = Math.min(systemScaled, density * 1.18f);
-            vib = (Vibrator) c.getSystemService(Context.VIBRATOR_SERVICE);
-            prefs = c.getSharedPreferences("snowman_game", Context.MODE_PRIVATE);
-            bestScore = prefs.getInt("best_score", 0);
-
-            text.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            density=getResources().getDisplayMetrics().density;
+            textScale=Math.min(getResources().getDisplayMetrics().scaledDensity, density*1.18f);
+            vib=(Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
+            prefs=c.getSharedPreferences("snowman_game", Context.MODE_PRIVATE);
+            bestScore=prefs.getInt("best_score",0);
+            text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeWidth(dp(2));
-            setFocusable(true);
-            setClickable(true);
-            setContentDescription("Гра Зліпи сніговика");
-
-            setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener() {
-                @Override
-                public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-                    if (Build.VERSION.SDK_INT >= 30) {
-                        Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                        safeTop = bars.top;
-                        safeBottom = bars.bottom;
-                    } else {
-                        safeTop = insets.getSystemWindowInsetTop();
-                        safeBottom = insets.getSystemWindowInsetBottom();
-                    }
-                    invalidate();
-                    return insets;
+            setFocusable(true); setClickable(true); setContentDescription("Гра Зліпи сніговика");
+            String[] names={"Очі","Морква","Ґудзики","Шарф","Шапка","Руки"};
+            for(int i=0;i<ACCESSORY_COUNT;i++) accessories[i]=new Accessory(i,names[i]);
+            mission=rnd.nextInt(3);
+            setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener(){
+                @Override public WindowInsets onApplyWindowInsets(View v,WindowInsets insets){
+                    if(Build.VERSION.SDK_INT>=30){
+                        Insets bars=insets.getInsets(WindowInsets.Type.systemBars()); safeTop=bars.top; safeBottom=bars.bottom;
+                    } else { safeTop=insets.getSystemWindowInsetTop(); safeBottom=insets.getSystemWindowInsetBottom(); }
+                    invalidate(); return insets;
                 }
             });
             requestApplyInsets();
         }
 
-        private float dp(float v) { return v * density; }
-        private float tx(float v) { return v * textScale; }
-        private float clamp(float v, float min, float max) { return Math.max(min, Math.min(max, v)); }
-        private float dist(float x1, float y1, float x2, float y2) {
-            return (float) Math.hypot(x1 - x2, y1 - y2);
+        float dp(float v){return v*density;} float tx(float v){return v*textScale;}
+        float clamp(float v,float a,float b){return Math.max(a,Math.min(b,v));}
+        float dist(float x1,float y1,float x2,float y2){return (float)Math.hypot(x1-x2,y1-y2);}
+        void vibrate(int ms){if(vib==null||!vib.hasVibrator())return;if(Build.VERSION.SDK_INT>=26)vib.vibrate(VibrationEffect.createOneShot(ms,85));else vib.vibrate(ms);}
+        void ensureTimer(){if(startTime==0)startTime=SystemClock.elapsedRealtime();}
+        int elapsedSeconds(){if(startTime==0)return 0;if(finished)return finishElapsed;return(int)((SystemClock.elapsedRealtime()-startTime)/1000L);}
+        int avgBuild(){return balls==0?0:qualitySum/balls;} int avgDecor(){return decorPlaced==0?0:decorQualitySum/decorPlaced;}
+
+        @Override protected void onDraw(Canvas c){
+            super.onDraw(c); layoutGame(); drawBackground(c); drawHud(c); drawTip(c); drawSnowman(c);
+            if(!finished){if(balls<3)drawRollingArea(c);else drawDecorationTray(c);} drawDust(c);
+            if(finished)drawFinishOverlay(c);else if(startTime!=0)postInvalidateDelayed(500);
         }
 
-        private void vibrate(int ms) {
-            if (vib == null || !vib.hasVibrator()) return;
-            if (Build.VERSION.SDK_INT >= 26) vib.vibrate(VibrationEffect.createOneShot(ms, 85));
-            else vib.vibrate(ms);
+        void layoutGame(){
+            float w=getWidth(), h=getHeight(), bottom=h-safeBottom, usableH=Math.max(dp(420),bottom-safeTop);
+            compact=usableH<dp(650); narrow=w<dp(360);
+            float margin=narrow?dp(9):dp(13), hudH=compact?dp(62):dp(70), tipH=compact?dp(34):dp(40);
+            float interactionH=balls<3?(compact?dp(102):dp(124)):(compact?dp(130):dp(154));
+            hudRect.set(margin,safeTop+dp(8),w-margin,safeTop+dp(8)+hudH);
+            tipRect.set(margin,hudRect.bottom+dp(7),w-margin,hudRect.bottom+dp(7)+tipH);
+            interactionRect.set(margin,bottom-interactionH-dp(7),w-margin,bottom-dp(7));
+            playTop=tipRect.bottom+dp(5); playBottom=interactionRect.top-dp(6);
+            float playH=Math.max(dp(220),playBottom-playTop);
+            baseR=clamp(Math.min(w*.205f,playH/4.02f),dp(34),dp(82)); midR=baseR*.72f; headR=baseR*.54f;
+            baseY=playBottom-baseR-dp(5); midY=baseY-(baseR+midR)*.84f; headY=midY-(midR+headR)*.84f;
+            targetX=w/2f; if(balls==0){targetY=baseY;targetR=baseR;}else if(balls==1){targetY=midY;targetR=midR;}else{targetY=headY;targetR=headR;}
+            setAccessoryTargets(); layoutAccessorySlots();
+            if(Float.isNaN(rollX)||Float.isNaN(rollY))resetRollingBallPosition(); if(!draggingBall&&balls<3)keepRollingBallInsideZone();
         }
 
-        @Override
-        protected void onDraw(Canvas c) {
-            super.onDraw(c);
-            layoutGame();
-            drawBackground(c);
-            drawHud(c);
-            drawTip(c);
-            drawSnowmanAndTarget(c);
-            drawRollZone(c);
-            drawDust(c);
-            drawControls(c);
-            if (finished) drawFinishOverlay(c);
+        void setAccessoryTargets(){float cx=getWidth()/2f;setTarget(EYES,cx,headY-headR*.16f);setTarget(NOSE,cx,headY+headR*.05f);setTarget(BUTTONS,cx,midY+midR*.02f);setTarget(SCARF,cx,midY-midR*.73f);setTarget(HAT,cx,headY-headR*1.28f);setTarget(ARMS,cx,midY-midR*.08f);}
+        void setTarget(int type,float x,float y){accessories[type].targetX=x;accessories[type].targetY=y;}
+        void layoutAccessorySlots(){
+            if(balls<3)return;float gap=dp(6),pad=dp(8),slotW=(interactionRect.width()-pad*2-gap*2)/3f,slotH=(interactionRect.height()-pad*2-gap)/2f;
+            for(int i=0;i<ACCESSORY_COUNT;i++){int row=i/3,col=i%3;float left=interactionRect.left+pad+col*(slotW+gap),top=interactionRect.top+pad+row*(slotH+gap);accessories[i].slot.set(left,top,left+slotW,top+slotH);}
+            finishBtn.set(interactionRect.left+dp(28),interactionRect.top+dp(22),interactionRect.right-dp(28),interactionRect.bottom-dp(22));
+        }
+        void resetRollingBallPosition(){rollX=interactionRect.centerX();rollY=interactionRect.centerY()+dp(3);}
+        float rollingRadius(){if(balls>=3)return 0;float start=dp(13),max=Math.min(targetR*.72f,interactionRect.height()*.36f);return start+(max-start)*clamp(rollProgress/100f,0,1);}
+        void keepRollingBallInsideZone(){float r=Math.max(dp(13),rollingRadius());rollX=clamp(rollX,interactionRect.left+r+dp(3),interactionRect.right-r-dp(3));rollY=clamp(rollY,interactionRect.top+r+dp(3),interactionRect.bottom-r-dp(3));}
+
+        void drawBackground(Canvas c){
+            float w=getWidth(),h=getHeight(),bottom=h-safeBottom;
+            LinearGradient sky=new LinearGradient(0,safeTop,0,bottom*.66f,Color.rgb(156,217,247),Color.rgb(225,246,255),Shader.TileMode.CLAMP);p.setShader(sky);c.drawRect(0,0,w,h,p);p.setShader(null);
+            p.setColor(Color.argb(220,255,255,255));c.drawOval(new RectF(-w*.42f,bottom*.39f,w*.68f,bottom*.69f),p);p.setColor(Color.argb(238,247,252,255));c.drawOval(new RectF(w*.22f,bottom*.46f,w*1.34f,bottom*.73f),p);p.setColor(Color.rgb(239,249,254));c.drawRect(0,bottom*.62f,w,h,p);
+            p.setColor(Color.argb(56,55,111,132));for(int i=0;i<5;i++){float x=w*(.07f+i*.235f),y=bottom*(.58f+(i%2)*.016f),s=dp(14+(i%3)*4);Path tree=new Path();tree.moveTo(x,y-s*2.3f);tree.lineTo(x-s,y);tree.lineTo(x+s,y);tree.close();c.drawPath(tree,p);}
+            p.setColor(Color.argb(145,255,255,255));int flakes=compact?18:26;float range=Math.max(dp(120),playBottom-safeTop);for(int i=0;i<flakes;i++){float x=(i*139f+31f)%Math.max(1f,w),y=safeTop+dp(16)+((i*197f)%range);c.drawCircle(x,y,dp(1.1f+(i%3)*.45f),p);}
         }
 
-        private void layoutGame() {
-            float w = getWidth();
-            float h = getHeight();
-            float top = safeTop;
-            float bottom = h - safeBottom;
-            float usableH = Math.max(dp(420), bottom - top);
-            compact = usableH < dp(650);
-            narrow = w < dp(360);
+        String formatTime(int sec){return String.format("%d:%02d",sec/60,sec%60);} String missionText(){if(mission==0)return"МІСІЯ: точність куль ≥ 85%";if(mission==1)return"МІСІЯ: завершити ≤ 90 с";return"МІСІЯ: декор ≥ 85%";}
+        void drawHud(Canvas c){
+            RectF r=hudRect;p.setColor(Color.argb(242,255,255,255));c.drawRoundRect(r,dp(21),dp(21),p);
+            text.setTextAlign(Paint.Align.LEFT);text.setColor(Color.rgb(38,69,89));text.setTextSize(tx(narrow?9:10));String stage=balls<3?"КУЛЯ "+(balls+1)+"/3":"ДЕКОР "+decorPlaced+"/6";c.drawText(stage,r.left+dp(15),r.top+dp(20),text);text.setTextSize(tx(narrow?15:17));c.drawText(balls<3?(int)rollProgress+"%":avgDecor()+"%",r.left+dp(15),r.bottom-dp(14),text);
+            float barLeft=r.left+(narrow?dp(76):dp(88)),barRight=r.right-dp(105),barTop=r.centerY()+dp(1),barH=dp(9);RectF bar=new RectF(barLeft,barTop,Math.max(barLeft+dp(24),barRight),barTop+barH);p.setColor(Color.rgb(220,237,246));c.drawRoundRect(bar,barH/2,barH/2,p);float progress=balls<3?rollProgress/100f:decorPlaced/6f;RectF fill=new RectF(bar.left,bar.top,bar.left+bar.width()*clamp(progress,0,1),bar.bottom);p.setColor((ballReady||decorPlaced==6)?Color.rgb(69,157,127):Color.rgb(57,136,180));if(fill.width()>dp(1))c.drawRoundRect(fill,barH/2,barH/2,p);
+            text.setTextAlign(Paint.Align.RIGHT);text.setColor(Color.rgb(31,74,104));text.setTextSize(tx(narrow?12.5f:14));c.drawText("★ "+score,r.right-dp(14),r.top+dp(23),text);text.setTextSize(tx(narrow?8:9));text.setColor(Color.rgb(105,133,149));c.drawText(formatTime(elapsedSeconds())+"   РЕК "+bestScore,r.right-dp(14),r.bottom-dp(13),text);
+        }
+        void drawTip(Canvas c){p.setColor(Color.argb(210,234,247,254));c.drawRoundRect(tipRect,dp(17),dp(17),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(narrow?9.6f:10.8f));text.setColor(Color.rgb(43,82,108));c.drawText(tip,tipRect.centerX(),tipRect.centerY()-dp(1),text);text.setTextSize(tx(narrow?7.2f:8.2f));text.setColor(Color.rgb(92,137,159));c.drawText(missionText(),tipRect.centerX(),tipRect.centerY()+dp(11),text);}
 
-            float margin = narrow ? dp(10) : dp(14);
-            float hudH = compact ? dp(62) : dp(70);
-            float tipH = compact ? dp(34) : dp(40);
-            float controlsH = compact ? dp(72) : dp(82);
+        void drawSnowman(Canvas c){
+            float cx=getWidth()/2f;p.setColor(Color.argb(42,68,129,157));c.drawOval(new RectF(cx-baseR*.92f,baseY+baseR*.69f,cx+baseR*.92f,baseY+baseR*1.05f),p);
+            if(balls>=1)drawBall(c,cx,baseY,baseR,1);if(balls>=2)drawBall(c,cx,midY,midR,2);if(balls>=3)drawBall(c,cx,headY,headR,3);
+            if(balls<3){stroke.setStrokeWidth(dp(2));stroke.setPathEffect(new DashPathEffect(new float[]{dp(7),dp(6)},0));stroke.setColor(Color.argb(ballReady?190:90,52,126,163));c.drawCircle(targetX,targetY,targetR,stroke);stroke.setPathEffect(null);if(ballReady){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(9));text.setColor(Color.rgb(65,123,151));c.drawText("ПЕРЕТЯГНИ СЮДИ",targetX,targetY,text);}}
+            for(Accessory a:accessories)if(a.placed)drawAccessoryPreview(c,a.type,a.x,a.y,255);
+            if(draggingAccessory>=0){Accessory a=accessories[draggingAccessory];drawTargetHint(c,a);drawAccessoryPreview(c,a.type,dragAccessoryX,dragAccessoryY,235);}
+        }
+        void drawBall(Canvas c,float x,float y,float r,int seed){RadialGradient g=new RadialGradient(x-r*.31f,y-r*.37f,r*1.42f,new int[]{Color.WHITE,Color.rgb(247,252,255),Color.rgb(198,227,242)},new float[]{0,.57f,1},Shader.TileMode.CLAMP);p.setShader(g);c.drawCircle(x,y,r,p);p.setShader(null);stroke.setColor(Color.argb(82,101,162,193));stroke.setStrokeWidth(dp(1));c.drawCircle(x,y,r-dp(.5f),stroke);p.setColor(Color.argb(55,136,186,210));for(int i=0;i<7;i++){double a=i*2.22+seed*.8;float rr=r*(.23f+((i*31+seed*17)%49)/100f),px=x+(float)Math.cos(a)*rr,py=y+(float)Math.sin(a)*rr;c.drawCircle(px,py,Math.max(dp(.8f),r*.018f),p);}p.setColor(Color.argb(170,255,255,255));c.drawOval(new RectF(x-r*.52f,y-r*.58f,x-r*.08f,y-r*.28f),p);}
 
-            hudRect.set(margin, top + dp(8), w - margin, top + dp(8) + hudH);
-            tipRect.set(margin, hudRect.bottom + dp(7), w - margin, hudRect.bottom + dp(7) + tipH);
-            controlsRect.set(dp(4), bottom - controlsH, w - dp(4), bottom);
+        void drawRollingArea(Canvas c){RectF r=interactionRect;p.setColor(Color.argb(221,251,254,255));c.drawRoundRect(r,dp(23),dp(23),p);stroke.setStrokeWidth(dp(1.3f));stroke.setColor(Color.argb(105,111,177,208));c.drawRoundRect(new RectF(r.left+dp(1),r.top+dp(1),r.right-dp(1),r.bottom-dp(1)),dp(22),dp(22),stroke);p.setColor(Color.argb(42,84,153,184));for(int i=0;i<5;i++){float yy=r.top+r.height()*(.23f+i*.14f);c.drawRoundRect(new RectF(r.left+dp(18),yy,r.right-dp(18),yy+dp(1.2f)),dp(1),dp(1),p);}drawRollingBall(c,rollX,rollY,rollingRadius());text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(narrow?8.3f:9.2f));text.setColor(Color.rgb(96,151,177));c.drawText(ballReady?"ЗАТИСНИ КУЛЮ":"КОТИ ПАЛЬЦЕМ",r.left+dp(12),r.top+dp(16),text);}
+        void drawRollingBall(Canvas c,float x,float y,float r){RadialGradient g=new RadialGradient(x-r*.32f,y-r*.38f,r*1.45f,new int[]{Color.WHITE,Color.rgb(244,251,255),Color.rgb(190,224,240)},new float[]{0,.56f,1},Shader.TileMode.CLAMP);p.setShader(g);c.drawCircle(x,y,r,p);p.setShader(null);stroke.setColor(Color.argb(90,91,153,184));stroke.setStrokeWidth(dp(1));c.drawCircle(x,y,r-dp(.5f),stroke);stroke.setColor(Color.argb(70,82,142,171));RectF arc=new RectF(x-r*.42f,y-r*.42f,x+r*.42f,y+r*.42f);c.drawArc(arc,205,75,false,stroke);}
 
-            playTop = tipRect.bottom + dp(5);
-            playBottom = controlsRect.top - dp(6);
-            float playH = Math.max(dp(245), playBottom - playTop);
-            float rollH = clamp(playH * (compact ? .27f : .29f), dp(86), dp(128));
-            rollZone.set(margin, playBottom - rollH, w - margin, playBottom);
-
-            float snowmanBottom = rollZone.top - dp(5);
-            float snowmanH = Math.max(dp(155), snowmanBottom - playTop);
-            baseR = Math.min(w * .205f, snowmanH / 4.08f);
-            baseR = clamp(baseR, dp(35), dp(82));
-            midR = baseR * .72f;
-            headR = baseR * .54f;
-
-            baseY = snowmanBottom - baseR - dp(3);
-            midY = baseY - (baseR + midR) * .84f;
-            headY = midY - (midR + headR) * .84f;
-
-            targetX = w / 2f;
-            if (balls == 0) { targetY = baseY; targetR = baseR; }
-            else if (balls == 1) { targetY = midY; targetR = midR; }
-            else { targetY = headY; targetR = headR; }
-
-            if (Float.isNaN(rollX) || Float.isNaN(rollY)) resetRollingBallPosition();
-            if (!draggingBall) keepRollingBallInsideZone();
+        void drawDecorationTray(Canvas c){
+            RectF r=interactionRect;p.setColor(Color.argb(224,250,254,255));c.drawRoundRect(r,dp(23),dp(23),p);
+            if(decorPlaced==ACCESSORY_COUNT){p.setColor(Color.rgb(38,105,145));c.drawRoundRect(finishBtn,dp(20),dp(20),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(13));text.setColor(Color.WHITE);c.drawText("ЗАВЕРШИТИ СНІГОВИКА",finishBtn.centerX(),finishBtn.centerY()+dp(5),text);return;}
+            for(Accessory a:accessories){RectF s=a.slot;p.setColor(a.placed?Color.rgb(226,242,235):Color.WHITE);c.drawRoundRect(s,dp(15),dp(15),p);if(a.placed){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(11));text.setColor(Color.rgb(69,141,116));c.drawText("✓",s.centerX(),s.centerY()-dp(2),text);}else drawTrayIcon(c,a.type,s.centerX(),s.centerY()-dp(5),Math.min(s.width(),s.height())*.27f);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(narrow?6.8f:7.7f));text.setColor(a.placed?Color.rgb(82,145,124):Color.rgb(84,128,151));c.drawText(a.name,s.centerX(),s.bottom-dp(7),text);}
+        }
+        void drawTrayIcon(Canvas c,int type,float x,float y,float s){p.setColor(Color.rgb(48,70,83));if(type==EYES){c.drawCircle(x-s*.34f,y,s*.18f,p);c.drawCircle(x+s*.34f,y,s*.18f,p);}else if(type==NOSE){Path n=new Path();n.moveTo(x-s*.28f,y-s*.15f);n.lineTo(x+s*.70f,y);n.lineTo(x-s*.28f,y+s*.15f);n.close();p.setColor(Color.rgb(242,119,37));c.drawPath(n,p);}else if(type==BUTTONS){for(int i=-1;i<=1;i++)c.drawCircle(x,y+i*s*.43f,s*.13f,p);}else if(type==SCARF){p.setColor(Color.rgb(198,62,68));c.drawRoundRect(new RectF(x-s*.72f,y-s*.17f,x+s*.72f,y+s*.17f),dp(3),dp(3),p);}else if(type==HAT){p.setColor(Color.rgb(45,62,78));c.drawRect(x-s*.72f,y+s*.18f,x+s*.72f,y+s*.36f,p);c.drawRoundRect(new RectF(x-s*.42f,y-s*.58f,x+s*.42f,y+s*.20f),dp(4),dp(4),p);}else{stroke.setColor(Color.rgb(111,82,58));stroke.setStrokeWidth(dp(3));c.drawLine(x-s*.75f,y+s*.30f,x-s*.15f,y-s*.20f,stroke);c.drawLine(x+s*.75f,y+s*.30f,x+s*.15f,y-s*.20f,stroke);}}
+        float accessoryTolerance(int type){if(type==HAT)return headR*.95f;if(type==ARMS||type==SCARF||type==BUTTONS)return midR*.90f;return headR*.80f;}
+        void drawTargetHint(Canvas c,Accessory a){float radius=accessoryTolerance(a.type)*.52f;stroke.setStrokeWidth(dp(2));stroke.setPathEffect(new DashPathEffect(new float[]{dp(6),dp(5)},0));stroke.setColor(Color.argb(185,46,126,164));c.drawCircle(a.targetX,a.targetY,radius,stroke);stroke.setPathEffect(null);}
+        void drawAccessoryPreview(Canvas c,int type,float x,float y,int alpha){
+            if(type==EYES){p.setColor(Color.argb(alpha,40,54,64));c.drawCircle(x-headR*.29f,y,headR*.075f,p);c.drawCircle(x+headR*.29f,y,headR*.075f,p);}else if(type==NOSE){Path n=new Path();n.moveTo(x-headR*.05f,y-headR*.09f);n.lineTo(x+headR*.78f,y+headR*.04f);n.lineTo(x-headR*.05f,y+headR*.12f);n.close();p.setColor(Color.argb(alpha,244,118,35));c.drawPath(n,p);}else if(type==BUTTONS){p.setColor(Color.argb(alpha,48,63,73));for(int i=-1;i<=1;i++)c.drawCircle(x,y+i*midR*.38f,midR*.055f,p);}else if(type==SCARF){p.setColor(Color.argb(alpha,200,61,68));c.drawRoundRect(new RectF(x-midR*.84f,y-midR*.10f,x+midR*.84f,y+midR*.12f),dp(7),dp(7),p);c.drawRoundRect(new RectF(x+midR*.34f,y+midR*.02f,x+midR*.60f,y+midR*.80f),dp(6),dp(6),p);}else if(type==HAT){p.setColor(Color.argb(alpha,45,62,78));c.drawRoundRect(new RectF(x-headR*.75f,y-headR*.02f,x+headR*.75f,y+headR*.17f),dp(5),dp(5),p);c.drawRoundRect(new RectF(x-headR*.50f,y-headR*.70f,x+headR*.50f,y+headR*.04f),dp(8),dp(8),p);p.setColor(Color.argb(alpha,70,132,164));c.drawRect(x-headR*.50f,y-headR*.10f,x+headR*.50f,y+headR*.03f,p);}else{stroke.setColor(Color.argb(alpha,108,80,58));stroke.setStrokeWidth(Math.max(dp(3),baseR*.035f));stroke.setStrokeCap(Paint.Cap.ROUND);c.drawLine(x-midR*.65f,y,x-midR*1.55f,y-midR*.48f,stroke);c.drawLine(x+midR*.65f,y,x+midR*1.55f,y-midR*.48f,stroke);c.drawLine(x-midR*1.45f,y-midR*.42f,x-midR*1.68f,y-midR*.70f,stroke);c.drawLine(x+midR*1.45f,y-midR*.42f,x+midR*1.68f,y-midR*.70f,stroke);stroke.setStrokeCap(Paint.Cap.BUTT);}
         }
 
-        private void resetRollingBallPosition() {
-            rollX = rollZone.centerX();
-            rollY = rollZone.centerY() + dp(3);
+        void addDust(float x,float y,float distance){if(dust.size()>38)dust.remove(0);float rr=dp(2)+Math.min(dp(4.5f),distance*.018f);dust.add(new Dust(x+rnd.nextFloat()*dp(11)-dp(5.5f),y+rnd.nextFloat()*dp(9)-dp(4.5f),rr,205));}
+        void drawDust(Canvas c){Iterator<Dust>it=dust.iterator();boolean more=false;while(it.hasNext()){Dust d=it.next();d.alpha-=15;d.radius+=dp(.08f);if(d.alpha<=0){it.remove();continue;}more=true;p.setColor(Color.argb(d.alpha,255,255,255));c.drawCircle(d.x,d.y,d.radius,p);}if(more)postInvalidateOnAnimation();}
+
+        @Override public boolean onTouchEvent(MotionEvent e){
+            float x=e.getX(),y=e.getY();
+            if(e.getAction()==MotionEvent.ACTION_DOWN){lastX=x;lastY=y;lastDx=0;lastDy=0;if(finished)return true;if(balls<3){float rr=rollingRadius();if(ballReady&&dist(x,y,rollX,rollY)<=rr*1.55f+dp(10)){ensureTimer();draggingBall=true;rolling=false;tip="Перетягни кулю в пунктирний контур";return true;}if(!ballReady&&interactionRect.contains(x,y)){ensureTimer();rolling=true;draggingBall=false;rollX=x;rollY=y;keepRollingBallInsideZone();return true;}}else if(decorPlaced<ACCESSORY_COUNT){for(Accessory a:accessories)if(!a.placed&&a.slot.contains(x,y)){ensureTimer();draggingAccessory=a.type;dragAccessoryX=x;dragAccessoryY=y;tip="Перетягни «"+a.name+"» на сніговика";invalidate();return true;}}return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE){if(finished)return true;if(rolling&&!ballReady&&balls<3){float dx=x-lastX,dy=y-lastY,d=(float)Math.hypot(dx,dy);if(d>dp(1.2f)){float required=dp(350)+targetR*1.55f;rollProgress=Math.min(100,rollProgress+d/required*100);if(lastDx!=0||lastDy!=0){float a=(float)Math.hypot(lastDx,lastDy),cosine=(lastDx*dx+lastDy*dy)/Math.max(.001f,a*d);if(cosine<-.45f)turnPenalty+=1;}lastDx=dx;lastDy=dy;rollX=x;rollY=y;keepRollingBallInsideZone();addDust(rollX,rollY,d);if(rollProgress>=100){rollProgress=100;ballReady=true;rolling=false;tip="Куля готова — затисни й постав у контур";vibrate(26);}else tip="Коти кулю: "+(int)rollProgress+"%";lastX=x;lastY=y;invalidate();}return true;}if(draggingBall&&ballReady&&balls<3){rollX=clamp(x,dp(8),getWidth()-dp(8));rollY=clamp(y,playTop,interactionRect.bottom);addDust(rollX,rollY,dp(3));invalidate();return true;}if(draggingAccessory>=0){dragAccessoryX=clamp(x,dp(6),getWidth()-dp(6));dragAccessoryY=clamp(y,playTop-dp(35),interactionRect.bottom);invalidate();return true;}return true;}
+            if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){performClick();if(finished){if(restartBtn.contains(x,y))reset();return true;}if(draggingBall&&ballReady&&balls<3){draggingBall=false;tryPlaceBall();return true;}rolling=false;if(draggingAccessory>=0){int type=draggingAccessory;draggingAccessory=-1;tryPlaceAccessory(type,x,y);return true;}if(balls>=3&&decorPlaced==ACCESSORY_COUNT&&finishBtn.contains(x,y)){finishGame();return true;}return true;}return true;
         }
+        @Override public boolean performClick(){super.performClick();return true;}
 
-        private float rollingRadius() {
-            if (balls >= 3) return 0f;
-            float start = dp(13);
-            float max = Math.min(targetR * .72f, rollZone.height() * .36f);
-            return start + (max - start) * clamp(rollProgress / 100f, 0f, 1f);
+        void tryPlaceBall(){float d=dist(rollX,rollY,targetX,targetY),threshold=targetR*.90f+rollingRadius()*.30f;if(d<=threshold){float accuracy=clamp(1-d/Math.max(dp(1),threshold),0,1);int quality=Math.max(60,Math.min(100,Math.round(72+accuracy*28-Math.min(8,turnPenalty*.45f))));qualitySum+=quality;score+=100+Math.round(accuracy*100);if(quality>=90){combo++;score+=20*combo;maxCombo=Math.max(maxCombo,combo);}else combo=0;balls++;vibrate(38);rollProgress=0;ballReady=false;turnPenalty=0;resetRollingBallPosition();tip=balls<3?"Точність "+quality+"%. Скоти кулю "+(balls+1):"Каркас готовий — перетягуй деталі знизу";invalidate();}else{tip="Не попав у контур — постав кулю точніше";resetRollingBallPosition();vibrate(14);invalidate();}}
+        void tryPlaceAccessory(int type,float x,float y){Accessory a=accessories[type];float tolerance=accessoryTolerance(type),d=dist(x,y,a.targetX,a.targetY);if(d<=tolerance){float accuracy=clamp(1-d/Math.max(dp(1),tolerance),0,1);int quality=Math.max(55,Math.min(100,Math.round(58+accuracy*42)));a.placed=true;a.x=x;a.y=y;a.quality=quality;decorPlaced++;decorQualitySum+=quality;score+=70+quality;if(quality>=90){combo++;score+=combo*20;maxCombo=Math.max(maxCombo,combo);}else combo=0;vibrate(24);tip=decorPlaced<ACCESSORY_COUNT?a.name+": "+quality+"%. Вибери наступну деталь":"Декор готовий — натисни «Завершити»";}else{combo=0;tip="Занадто далеко. «"+a.name+"» повернуто в набір";vibrate(12);}invalidate();}
+        void finishGame(){ensureTimer();finishElapsed=elapsedSeconds();score+=Math.max(0,180-finishElapsed*2);if(mission==0)missionSuccess=avgBuild()>=85;else if(mission==1)missionSuccess=finishElapsed<=90;else missionSuccess=avgDecor()>=85;if(missionSuccess)score+=250;finished=true;if(score>bestScore){bestScore=score;prefs.edit().putInt("best_score",bestScore).apply();}vibrate(65);invalidate();}
+
+        void drawFinishOverlay(Canvas c){
+            float w=getWidth(),bottom=getHeight()-safeBottom;p.setColor(Color.argb(192,20,43,59));c.drawRect(0,0,getWidth(),getHeight(),p);float cardW=Math.min(w-dp(28),dp(376)),cardH=Math.min(bottom-safeTop-dp(30),compact?dp(360):dp(405)),left=(w-cardW)/2,top=safeTop+(bottom-safeTop-cardH)/2;RectF card=new RectF(left,top,left+cardW,top+cardH);p.setColor(Color.WHITE);c.drawRoundRect(card,dp(28),dp(28),p);
+            text.setTextAlign(Paint.Align.CENTER);text.setColor(Color.rgb(30,69,93));text.setTextSize(tx(18));c.drawText("Сніговик готовий!",card.centerX(),card.top+dp(42),text);text.setTextSize(tx(38));text.setColor(Color.rgb(39,117,159));c.drawText(String.valueOf(score),card.centerX(),card.top+dp(96),text);text.setTextSize(tx(9.5f));text.setColor(Color.rgb(105,139,157));c.drawText("КУЛІ  "+avgBuild()+"%     ДЕКОР  "+avgDecor()+"%",card.centerX(),card.top+dp(127),text);c.drawText("ЧАС  "+formatTime(finishElapsed)+"     КОМБО ×"+maxCombo,card.centerX(),card.top+dp(149),text);c.drawText("РЕКОРД  "+bestScore,card.centerX(),card.top+dp(171),text);
+            RectF badge=new RectF(card.left+dp(24),card.top+dp(190),card.right-dp(24),card.top+dp(238));p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(244,239,232));c.drawRoundRect(badge,dp(17),dp(17),p);text.setTextSize(tx(9));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО +250":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()-dp(3),text);text.setTextSize(tx(7.6f));c.drawText(missionText(),badge.centerX(),badge.centerY()+dp(11),text);
+            restartBtn.set(card.left+dp(24),card.bottom-dp(70),card.right-dp(24),card.bottom-dp(19));p.setColor(Color.rgb(38,105,145));c.drawRoundRect(restartBtn,dp(18),dp(18),p);text.setTextSize(tx(12));text.setColor(Color.WHITE);c.drawText("ЩЕ ОДИН СНІГОВИК",restartBtn.centerX(),restartBtn.centerY()+dp(4),text);
         }
+        void reset(){balls=0;score=0;qualitySum=0;decorQualitySum=0;decorPlaced=0;combo=0;maxCombo=0;finished=false;rollProgress=0;rolling=false;draggingBall=false;ballReady=false;turnPenalty=0;draggingAccessory=-1;startTime=0;finishElapsed=0;missionSuccess=false;mission=rnd.nextInt(3);tip="Коти сніг пальцем — зроби першу кулю";dust.clear();for(Accessory a:accessories){a.placed=false;a.quality=0;a.x=a.y=0;}rollX=Float.NaN;rollY=Float.NaN;vibrate(18);invalidate();}
 
-        private void keepRollingBallInsideZone() {
-            if (balls >= 3) return;
-            float r = Math.max(dp(13), rollingRadius());
-            rollX = clamp(rollX, rollZone.left + r + dp(3), rollZone.right - r - dp(3));
-            rollY = clamp(rollY, rollZone.top + r + dp(3), rollZone.bottom - r - dp(3));
-        }
-
-        private void drawBackground(Canvas c) {
-            float w = getWidth();
-            float h = getHeight();
-            float bottom = h - safeBottom;
-
-            LinearGradient sky = new LinearGradient(0, safeTop, 0, bottom * .64f,
-                    Color.rgb(159, 218, 247), Color.rgb(222, 244, 255), Shader.TileMode.CLAMP);
-            p.setShader(sky);
-            c.drawRect(0, 0, w, h, p);
-            p.setShader(null);
-
-            // Distant snow hills.
-            p.setColor(Color.argb(218, 255, 255, 255));
-            c.drawOval(new RectF(-w * .45f, bottom * .39f, w * .68f, bottom * .68f), p);
-            p.setColor(Color.argb(238, 247, 252, 255));
-            c.drawOval(new RectF(w * .20f, bottom * .45f, w * 1.35f, bottom * .72f), p);
-            p.setColor(Color.rgb(239, 249, 254));
-            c.drawRect(0, bottom * .61f, w, h, p);
-
-            // Minimal tree silhouettes to add depth without clutter.
-            p.setColor(Color.argb(55, 60, 117, 137));
-            for (int i = 0; i < 5; i++) {
-                float x = w * (.08f + i * .23f);
-                float y = bottom * (.57f + (i % 2) * .018f);
-                float s = dp(15 + (i % 3) * 4);
-                Path tree = new Path();
-                tree.moveTo(x, y - s * 2.3f);
-                tree.lineTo(x - s, y);
-                tree.lineTo(x + s, y);
-                tree.close();
-                c.drawPath(tree, p);
-            }
-
-            // Static snow flakes.
-            p.setColor(Color.argb(150, 255, 255, 255));
-            int flakes = compact ? 18 : 26;
-            float range = Math.max(dp(120), playBottom - safeTop);
-            for (int i = 0; i < flakes; i++) {
-                float x = (i * 139f + 31f) % Math.max(1f, w);
-                float y = safeTop + dp(16) + ((i * 197f) % range);
-                c.drawCircle(x, y, dp(1.1f + (i % 3) * .45f), p);
-            }
-        }
-
-        private void drawHud(Canvas c) {
-            RectF r = hudRect;
-            p.setColor(Color.argb(241, 255, 255, 255));
-            c.drawRoundRect(r, dp(21), dp(21), p);
-
-            text.setTextAlign(Paint.Align.LEFT);
-            text.setColor(Color.rgb(38, 69, 89));
-            text.setTextSize(tx(narrow ? 9.5f : 10.5f));
-            c.drawText("КУЛЯ " + Math.min(3, balls + 1) + "/3", r.left + dp(16), r.top + dp(20), text);
-            text.setTextSize(tx(narrow ? 16 : 18));
-            String progressLabel = balls >= 3 ? "ГОТОВО" : (int) rollProgress + "%";
-            c.drawText(progressLabel, r.left + dp(16), r.bottom - dp(14), text);
-
-            float barLeft = r.left + (narrow ? dp(80) : dp(92));
-            float barRight = r.right - dp(92);
-            float barH = dp(9);
-            float barTop = r.centerY() - barH / 2f + dp(3);
-            RectF bar = new RectF(barLeft, barTop, Math.max(barLeft + dp(20), barRight), barTop + barH);
-            p.setColor(Color.rgb(220, 237, 246));
-            c.drawRoundRect(bar, barH / 2, barH / 2, p);
-            float fillP = balls >= 3 ? 1f : clamp(rollProgress / 100f, 0f, 1f);
-            RectF fill = new RectF(bar.left, bar.top, bar.left + bar.width() * fillP, bar.bottom);
-            p.setColor(ballReady || balls >= 3 ? Color.rgb(69, 157, 127) : Color.rgb(57, 136, 180));
-            if (fill.width() > dp(1)) c.drawRoundRect(fill, barH / 2, barH / 2, p);
-
-            text.setTextAlign(Paint.Align.RIGHT);
-            text.setColor(Color.rgb(31, 74, 104));
-            text.setTextSize(tx(narrow ? 13 : 15));
-            c.drawText("★ " + score, r.right - dp(15), r.top + dp(25), text);
-            text.setTextSize(tx(narrow ? 8.5f : 9.5f));
-            text.setColor(Color.rgb(107, 133, 149));
-            c.drawText("РЕКОРД " + bestScore, r.right - dp(15), r.bottom - dp(14), text);
-        }
-
-        private void drawTip(Canvas c) {
-            p.setColor(Color.argb(208, 234, 247, 254));
-            c.drawRoundRect(tipRect, dp(17), dp(17), p);
-            text.setTextAlign(Paint.Align.CENTER);
-            text.setTextSize(tx(narrow ? 10.3f : 11.6f));
-            text.setColor(Color.rgb(43, 82, 108));
-            c.drawText(tip, tipRect.centerX(), tipRect.centerY() + dp(4), text);
-        }
-
-        private void drawSnowmanAndTarget(Canvas c) {
-            float cx = getWidth() / 2f;
-
-            // Ground shadow anchors the object visually.
-            p.setColor(Color.argb(42, 68, 129, 157));
-            c.drawOval(new RectF(cx - baseR * .92f, baseY + baseR * .69f,
-                    cx + baseR * .92f, baseY + baseR * 1.05f), p);
-
-            if (balls >= 1) drawBall(c, cx, baseY, baseR, 1);
-            if (balls >= 2) drawBall(c, cx, midY, midR, 2);
-            if (balls >= 3) drawBall(c, cx, headY, headR, 3);
-
-            if (balls < 3) {
-                // Ghost target shows where the completed rolling ball should be placed.
-                stroke.setStrokeWidth(dp(2));
-                stroke.setPathEffect(new DashPathEffect(new float[]{dp(7), dp(6)}, 0));
-                stroke.setColor(Color.argb(ballReady ? 180 : 85, 52, 126, 163));
-                c.drawCircle(targetX, targetY, targetR * 1.01f, stroke);
-                stroke.setPathEffect(null);
-
-                if (ballReady) {
-                    text.setTextAlign(Paint.Align.CENTER);
-                    text.setTextSize(tx(narrow ? 9 : 10));
-                    text.setColor(Color.rgb(66, 123, 151));
-                    c.drawText("ПЕРЕТЯГНИ СЮДИ", targetX, targetY - targetR - dp(8), text);
-                }
-            }
-
-            if (balls == 0 && !ballReady) {
-                text.setTextAlign(Paint.Align.CENTER);
-                text.setTextSize(tx(10));
-                text.setColor(Color.rgb(104, 153, 178));
-                c.drawText("ОСНОВА СНІГОВИКА", cx, targetY, text);
-            }
-
-            if (face && balls >= 3) drawFace(c, cx);
-            if (dressed && balls >= 3) drawClothes(c, cx);
-        }
-
-        private void drawBall(Canvas c, float x, float y, float r, int seed) {
-            RadialGradient g = new RadialGradient(x - r * .34f, y - r * .38f, r * 1.42f,
-                    new int[]{Color.WHITE, Color.rgb(247, 252, 255), Color.rgb(202, 230, 244)},
-                    new float[]{0f, .57f, 1f}, Shader.TileMode.CLAMP);
-            p.setShader(g);
-            c.drawCircle(x, y, r, p);
-            p.setShader(null);
-
-            // Snow texture: subtle compressed patches make balls less plastic-looking.
-            p.setColor(Color.argb(28, 101, 161, 190));
-            for (int i = 0; i < 7; i++) {
-                double a = seed * 1.7 + i * 2.31;
-                float px = x + (float) Math.cos(a) * r * (.20f + (i % 3) * .17f);
-                float py = y + (float) Math.sin(a) * r * (.17f + (i % 2) * .20f);
-                c.drawCircle(px, py, Math.max(dp(1.1f), r * .026f), p);
-            }
-
-            p.setColor(Color.argb(95, 255, 255, 255));
-            c.drawOval(new RectF(x - r * .52f, y - r * .58f, x - r * .06f, y - r * .25f), p);
-            stroke.setColor(Color.argb(72, 106, 165, 194));
-            stroke.setStrokeWidth(dp(1));
-            c.drawCircle(x, y, r - dp(.5f), stroke);
-        }
-
-        private void drawFace(Canvas c, float cx) {
-            p.setColor(Color.rgb(38, 50, 60));
-            c.drawCircle(cx - headR * .30f, headY - headR * .18f, headR * .075f, p);
-            c.drawCircle(cx + headR * .30f, headY - headR * .18f, headR * .075f, p);
-
-            // Tiny eye highlights.
-            p.setColor(Color.argb(180, 255, 255, 255));
-            c.drawCircle(cx - headR * .325f, headY - headR * .205f, headR * .018f, p);
-            c.drawCircle(cx + headR * .275f, headY - headR * .205f, headR * .018f, p);
-
-            Path carrot = new Path();
-            carrot.moveTo(cx - headR * .02f, headY + headR * .01f);
-            carrot.lineTo(cx + headR * .76f, headY + headR * .10f);
-            carrot.lineTo(cx - headR * .02f, headY + headR * .18f);
-            carrot.close();
-            p.setColor(Color.rgb(241, 116, 31));
-            c.drawPath(carrot, p);
-            p.setColor(Color.argb(80, 164, 78, 25));
-            c.drawLine(cx + headR * .20f, headY + headR * .07f,
-                    cx + headR * .30f, headY + headR * .13f, p);
-
-            p.setColor(Color.rgb(48, 62, 71));
-            for (int i = -2; i <= 2; i++) {
-                float mx = cx + i * headR * .16f;
-                float my = headY + headR * .43f + Math.abs(i) * headR * .035f;
-                c.drawCircle(mx, my, headR * .043f, p);
-            }
-            for (int i = 0; i < 3; i++) {
-                c.drawCircle(cx, midY - midR * .34f + i * midR * .39f, midR * .052f, p);
-            }
-        }
-
-        private void drawClothes(Canvas c, float cx) {
-            stroke.setColor(Color.rgb(102, 76, 56));
-            stroke.setStrokeWidth(Math.max(dp(3), baseR * .036f));
-            stroke.setStrokeCap(Paint.Cap.ROUND);
-            c.drawLine(cx - midR * .70f, midY - midR * .08f, cx - midR * 1.55f, midY - midR * .54f, stroke);
-            c.drawLine(cx + midR * .70f, midY - midR * .08f, cx + midR * 1.55f, midY - midR * .54f, stroke);
-            c.drawLine(cx - midR * 1.44f, midY - midR * .48f, cx - midR * 1.70f, midY - midR * .75f, stroke);
-            c.drawLine(cx - midR * 1.44f, midY - midR * .48f, cx - midR * 1.72f, midY - midR * .32f, stroke);
-            c.drawLine(cx + midR * 1.44f, midY - midR * .48f, cx + midR * 1.70f, midY - midR * .75f, stroke);
-            c.drawLine(cx + midR * 1.44f, midY - midR * .48f, cx + midR * 1.72f, midY - midR * .32f, stroke);
-            stroke.setStrokeCap(Paint.Cap.BUTT);
-
-            // Hat.
-            p.setColor(Color.rgb(42, 58, 72));
-            c.drawRoundRect(new RectF(cx - headR * .78f, headY - headR * 1.23f,
-                    cx + headR * .78f, headY - headR * 1.04f), dp(5), dp(5), p);
-            c.drawRoundRect(new RectF(cx - headR * .50f, headY - headR * 1.85f,
-                    cx + headR * .50f, headY - headR * 1.11f), dp(8), dp(8), p);
-            p.setColor(Color.rgb(61, 128, 161));
-            c.drawRect(cx - headR * .50f, headY - headR * 1.29f,
-                    cx + headR * .50f, headY - headR * 1.16f, p);
-
-            // Scarf with a second shadow strip.
-            p.setColor(Color.rgb(199, 61, 68));
-            c.drawRoundRect(new RectF(cx - midR * .84f, midY - midR * .86f,
-                    cx + midR * .84f, midY - midR * .64f), dp(8), dp(8), p);
-            c.drawRoundRect(new RectF(cx + midR * .34f, midY - midR * .70f,
-                    cx + midR * .61f, midY + midR * .12f), dp(6), dp(6), p);
-            p.setColor(Color.argb(55, 85, 22, 30));
-            c.drawRect(cx - midR * .76f, midY - midR * .70f,
-                    cx + midR * .76f, midY - midR * .65f, p);
-        }
-
-        private void drawRollZone(Canvas c) {
-            RectF r = rollZone;
-            p.setColor(Color.argb(218, 251, 254, 255));
-            c.drawRoundRect(r, dp(23), dp(23), p);
-            stroke.setStrokeWidth(dp(1.3f));
-            stroke.setColor(Color.argb(100, 111, 177, 208));
-            c.drawRoundRect(new RectF(r.left + dp(1), r.top + dp(1), r.right - dp(1), r.bottom - dp(1)),
-                    dp(22), dp(22), stroke);
-
-            // Subtle rolling tracks.
-            p.setColor(Color.argb(45, 84, 153, 184));
-            for (int i = 0; i < 5; i++) {
-                float yy = r.top + r.height() * (.23f + i * .14f);
-                c.drawRoundRect(new RectF(r.left + dp(18), yy, r.right - dp(18), yy + dp(1.2f)),
-                        dp(1), dp(1), p);
-            }
-
-            if (balls >= 3) {
-                text.setTextAlign(Paint.Align.CENTER);
-                text.setTextSize(tx(11));
-                text.setColor(Color.rgb(75, 139, 164));
-                c.drawText("КАРКАС ГОТОВИЙ", r.centerX(), r.centerY() - dp(3), text);
-                text.setTextSize(tx(9));
-                text.setColor(Color.rgb(126, 163, 181));
-                c.drawText("Додай обличчя та одяг", r.centerX(), r.centerY() + dp(16), text);
-                return;
-            }
-
-            float rr = rollingRadius();
-            drawRollingBall(c, rollX, rollY, rr);
-
-            text.setTextAlign(Paint.Align.LEFT);
-            text.setTextSize(tx(narrow ? 8.5f : 9.5f));
-            text.setColor(Color.rgb(97, 151, 177));
-            String label = ballReady ? "ЗАТИСНИ КУЛЮ" : "КОТИ ПАЛЬЦЕМ";
-            c.drawText(label, r.left + dp(12), r.top + dp(16), text);
-        }
-
-        private void drawRollingBall(Canvas c, float x, float y, float r) {
-            RadialGradient g = new RadialGradient(x - r * .32f, y - r * .38f, r * 1.45f,
-                    new int[]{Color.WHITE, Color.rgb(244, 251, 255), Color.rgb(190, 224, 240)},
-                    new float[]{0f, .56f, 1f}, Shader.TileMode.CLAMP);
-            p.setShader(g);
-            c.drawCircle(x, y, r, p);
-            p.setShader(null);
-
-            stroke.setColor(Color.argb(90, 91, 153, 184));
-            stroke.setStrokeWidth(dp(1));
-            c.drawCircle(x, y, r - dp(.5f), stroke);
-
-            // Curved compression mark gives a sense that the ball is rolling.
-            stroke.setColor(Color.argb(70, 82, 142, 171));
-            stroke.setStrokeWidth(Math.max(dp(1), r * .025f));
-            RectF arc = new RectF(x - r * .42f, y - r * .42f, x + r * .42f, y + r * .42f);
-            c.drawArc(arc, 205, 75, false, stroke);
-        }
-
-        private void drawControls(Canvas c) {
-            float w = getWidth();
-            RectF r = controlsRect;
-            p.setColor(Color.argb(205, 248, 253, 255));
-            c.drawRoundRect(r, dp(23), dp(23), p);
-
-            float gap = dp(5);
-            float outer = dp(7);
-            float top = r.top + dp(6);
-            float bottom = r.bottom - dp(6);
-            float bw = (r.width() - outer * 2 - gap * 3) / 4f;
-            float left = r.left + outer;
-            statusBtn.set(left, top, left + bw, bottom);
-            faceBtn.set(statusBtn.right + gap, top, statusBtn.right + gap + bw, bottom);
-            dressBtn.set(faceBtn.right + gap, top, faceBtn.right + gap + bw, bottom);
-            finishBtn.set(dressBtn.right + gap, top, r.right - outer, bottom);
-
-            drawButton(c, statusBtn, "КУЛІ", balls + "/3", false, balls >= 3);
-            drawButton(c, faceBtn, "ОБЛИЧЧЯ", face ? "ГОТОВО" : "КРОК 2", balls >= 3 && !face, face);
-            drawButton(c, dressBtn, "ОДЯГ", dressed ? "ГОТОВО" : "КРОК 3", face && !dressed, dressed);
-            drawButton(c, finishBtn, "ФІНІШ", finished ? "ГОТОВО" : "КРОК 4", dressed && !finished, finished);
-        }
-
-        private void drawButton(Canvas c, RectF r, String title, String sub, boolean active, boolean done) {
-            if (done) p.setColor(Color.rgb(80, 151, 127));
-            else if (active) p.setColor(Color.rgb(38, 105, 145));
-            else p.setColor(Color.rgb(215, 229, 237));
-            c.drawRoundRect(r, dp(16), dp(16), p);
-
-            text.setTextAlign(Paint.Align.CENTER);
-            text.setTextSize(tx(narrow ? 8.2f : 9.7f));
-            text.setColor((active || done) ? Color.WHITE : Color.rgb(111, 136, 151));
-            c.drawText(title, r.centerX(), r.centerY() - dp(2), text);
-            text.setTextSize(tx(narrow ? 6.8f : 7.8f));
-            text.setColor((active || done) ? Color.argb(225, 255, 255, 255) : Color.rgb(151, 170, 181));
-            c.drawText(sub, r.centerX(), r.centerY() + dp(14), text);
-        }
-
-        private void addDust(float x, float y, float distance) {
-            if (dust.size() > 36) dust.remove(0);
-            float rr = dp(2) + Math.min(dp(4.5f), distance * .018f);
-            dust.add(new Dust(x + rnd.nextFloat() * dp(11) - dp(5.5f),
-                    y + rnd.nextFloat() * dp(9) - dp(4.5f), rr, 205));
-        }
-
-        private void drawDust(Canvas c) {
-            Iterator<Dust> it = dust.iterator();
-            boolean more = false;
-            while (it.hasNext()) {
-                Dust d = it.next();
-                d.alpha -= 15;
-                d.radius += dp(.08f);
-                if (d.alpha <= 0) {
-                    it.remove();
-                    continue;
-                }
-                more = true;
-                p.setColor(Color.argb(d.alpha, 255, 255, 255));
-                c.drawCircle(d.x, d.y, d.radius, p);
-            }
-            if (more) postInvalidateOnAnimation();
-        }
-
-        private void drawFinishOverlay(Canvas c) {
-            float w = getWidth();
-            float top = safeTop;
-            float bottom = getHeight() - safeBottom;
-            p.setColor(Color.argb(190, 20, 43, 59));
-            c.drawRect(0, 0, getWidth(), getHeight(), p);
-
-            float cardW = Math.min(w - dp(30), dp(370));
-            float cardH = Math.min(bottom - top - dp(38), compact ? dp(300) : dp(336));
-            float left = (w - cardW) / 2f;
-            float cardTop = top + (bottom - top - cardH) / 2f;
-            RectF card = new RectF(left, cardTop, left + cardW, cardTop + cardH);
-            p.setColor(Color.WHITE);
-            c.drawRoundRect(card, dp(28), dp(28), p);
-
-            text.setTextAlign(Paint.Align.CENTER);
-            text.setColor(Color.rgb(30, 69, 93));
-            text.setTextSize(tx(19));
-            c.drawText("Сніговик готовий!", card.centerX(), card.top + dp(48), text);
-
-            text.setTextSize(tx(39));
-            text.setColor(Color.rgb(39, 117, 159));
-            c.drawText(String.valueOf(score), card.centerX(), card.top + dp(109), text);
-
-            int avgQuality = balls == 0 ? 0 : qualitySum / balls;
-            text.setTextSize(tx(10));
-            text.setColor(Color.rgb(111, 141, 158));
-            c.drawText("ТОЧНІСТЬ СКЛАДАННЯ  " + avgQuality + "%", card.centerX(), card.top + dp(139), text);
-            c.drawText("РЕКОРД  " + bestScore, card.centerX(), card.top + dp(161), text);
-
-            if (score >= bestScore && score > 0) {
-                p.setColor(Color.rgb(230, 246, 238));
-                RectF badge = new RectF(card.centerX() - dp(66), card.top + dp(177), card.centerX() + dp(66), card.top + dp(211));
-                c.drawRoundRect(badge, dp(15), dp(15), p);
-                text.setTextSize(tx(9));
-                text.setColor(Color.rgb(57, 132, 105));
-                c.drawText("НОВИЙ РЕКОРД", badge.centerX(), badge.centerY() + dp(3), text);
-            }
-
-            restartBtn.set(card.left + dp(24), card.bottom - dp(72), card.right - dp(24), card.bottom - dp(20));
-            p.setColor(Color.rgb(38, 105, 145));
-            c.drawRoundRect(restartBtn, dp(18), dp(18), p);
-            text.setTextSize(tx(12));
-            text.setColor(Color.WHITE);
-            c.drawText("ГРАТИ ЩЕ", restartBtn.centerX(), restartBtn.centerY() + dp(4), text);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent e) {
-            float x = e.getX();
-            float y = e.getY();
-
-            if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                lastX = x;
-                lastY = y;
-                lastDx = 0f;
-                lastDy = 0f;
-
-                if (finished) return true;
-
-                if (balls < 3) {
-                    float rr = rollingRadius();
-                    if (ballReady && dist(x, y, rollX, rollY) <= rr * 1.55f + dp(10)) {
-                        draggingBall = true;
-                        rolling = false;
-                        tip = "Перетягни кулю в пунктирний контур";
-                        return true;
-                    }
-                    if (!ballReady && rollZone.contains(x, y)) {
-                        rolling = true;
-                        draggingBall = false;
-                        rollX = x;
-                        rollY = y;
-                        keepRollingBallInsideZone();
-                        return true;
-                    }
-                }
-                return true;
-            }
-
-            if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                if (finished) return true;
-
-                if (rolling && !ballReady && balls < 3) {
-                    float dx = x - lastX;
-                    float dy = y - lastY;
-                    float d = (float) Math.hypot(dx, dy);
-                    if (d > dp(1.2f)) {
-                        float required = dp(355) + targetR * 1.55f;
-                        rollProgress = Math.min(100f, rollProgress + (d / required) * 100f);
-
-                        if (lastDx != 0f || lastDy != 0f) {
-                            float a = (float) Math.hypot(lastDx, lastDy);
-                            float b = Math.max(.001f, d);
-                            float cosine = (lastDx * dx + lastDy * dy) / (a * b);
-                            if (cosine < -.45f) turnPenalty += 1f;
-                        }
-                        lastDx = dx;
-                        lastDy = dy;
-
-                        rollX = x;
-                        rollY = y;
-                        keepRollingBallInsideZone();
-                        addDust(rollX, rollY, d);
-
-                        if (rollProgress >= 100f) {
-                            rollProgress = 100f;
-                            ballReady = true;
-                            rolling = false;
-                            tip = "Куля готова — затисни й перетягни її в контур";
-                            vibrate(26);
-                        } else {
-                            tip = "Коти кулю по снігу: " + (int) rollProgress + "%";
-                        }
-                        lastX = x;
-                        lastY = y;
-                        invalidate();
-                    }
-                    return true;
-                }
-
-                if (draggingBall && ballReady && balls < 3) {
-                    rollX = clamp(x, dp(8), getWidth() - dp(8));
-                    rollY = clamp(y, playTop, playBottom);
-                    addDust(rollX, rollY, dp(3));
-                    lastX = x;
-                    lastY = y;
-                    invalidate();
-                    return true;
-                }
-
-                lastX = x;
-                lastY = y;
-                return true;
-            }
-
-            if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
-                performClick();
-
-                if (finished) {
-                    if (restartBtn.contains(x, y)) reset();
-                    return true;
-                }
-
-                if (draggingBall && ballReady && balls < 3) {
-                    draggingBall = false;
-                    tryPlaceBall();
-                    return true;
-                }
-                rolling = false;
-
-                if (faceBtn.contains(x, y)) addFace();
-                else if (dressBtn.contains(x, y)) addDress();
-                else if (finishBtn.contains(x, y)) finishGame();
-                else if (statusBtn.contains(x, y) && balls < 3) {
-                    tip = ballReady ? "Затисни кулю та перетягни в контур" : "Коти кулю пальцем у нижній сніговій зоні";
-                    invalidate();
-                }
-                return true;
-            }
-
-            return true;
-        }
-
-        @Override
-        public boolean performClick() {
-            super.performClick();
-            return true;
-        }
-
-        private void tryPlaceBall() {
-            float d = dist(rollX, rollY, targetX, targetY);
-            float threshold = targetR * .90f + rollingRadius() * .30f;
-            if (d <= threshold) {
-                float accuracy = clamp(1f - d / Math.max(dp(1), threshold), 0f, 1f);
-                int quality = Math.round(72 + accuracy * 28 - Math.min(8f, turnPenalty * .45f));
-                quality = Math.max(60, Math.min(100, quality));
-                qualitySum += quality;
-                score += 100 + Math.round(accuracy * 100f);
-                balls++;
-                vibrate(38);
-                rollProgress = 0f;
-                ballReady = false;
-                turnPenalty = 0f;
-                resetRollingBallPosition();
-
-                if (balls < 3) tip = "Точність " + quality + "%. Тепер скоти кулю " + (balls + 1);
-                else tip = "Каркас готовий — додай обличчя";
-                invalidate();
-            } else {
-                tip = "Не попав у контур — спробуй поставити точніше";
-                resetRollingBallPosition();
-                vibrate(14);
-                invalidate();
-            }
-        }
-
-        private void addFace() {
-            if (balls < 3 || face) {
-                if (balls < 3) tip = "Спочатку склади три снігові кулі";
-                invalidate();
-                return;
-            }
-            face = true;
-            score += 100;
-            tip = "Обличчя готове. Тепер одягни сніговика";
-            vibrate(24);
-            invalidate();
-        }
-
-        private void addDress() {
-            if (!face || dressed) {
-                if (!face) tip = "Спочатку додай обличчя";
-                invalidate();
-                return;
-            }
-            dressed = true;
-            score += 100;
-            tip = "Шапка, шарф і руки готові — можна завершувати";
-            vibrate(24);
-            invalidate();
-        }
-
-        private void finishGame() {
-            if (!dressed || finished) {
-                if (!dressed) tip = "Спочатку одягни сніговика";
-                invalidate();
-                return;
-            }
-            score += 50;
-            finished = true;
-            if (score > bestScore) {
-                bestScore = score;
-                prefs.edit().putInt("best_score", bestScore).apply();
-            }
-            vibrate(60);
-            invalidate();
-        }
-
-        private void reset() {
-            balls = 0;
-            score = 0;
-            qualitySum = 0;
-            face = false;
-            dressed = false;
-            finished = false;
-            rollProgress = 0f;
-            rolling = false;
-            draggingBall = false;
-            ballReady = false;
-            turnPenalty = 0f;
-            tip = "Проведи пальцем по снігу — куля почне рости";
-            dust.clear();
-            resetRollingBallPosition();
-            vibrate(18);
-            invalidate();
-        }
-
-        static class Dust {
-            float x, y, radius;
-            int alpha;
-            Dust(float x, float y, float radius, int alpha) {
-                this.x = x;
-                this.y = y;
-                this.radius = radius;
-                this.alpha = alpha;
-            }
-        }
+        static class Accessory{final int type;final String name;final RectF slot=new RectF();float targetX,targetY,x,y;int quality;boolean placed;Accessory(int type,String name){this.type=type;this.name=name;}}
+        static class Dust{float x,y,radius;int alpha;Dust(float x,float y,float radius,int alpha){this.x=x;this.y=y;this.radius=radius;this.alpha=alpha;}}
     }
 }
