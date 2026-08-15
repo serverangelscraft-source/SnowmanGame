@@ -503,7 +503,8 @@ public class MainActivity extends Activity {
 
             journeyBtn.set(card.left+dp(22),card.bottom-dp(116),card.right-dp(22),card.bottom-dp(62));
             p.setColor(Color.rgb(35,106,153));c.drawRoundRect(journeyBtn,dp(19),dp(19),p);text.setTextSize(tx(10.5f));text.setColor(Color.WHITE);
-            c.drawText(year>=7?"ДО ШКІЛЬНИХ ПРИГОД":"ЗАБРАТИ ПОСИЛКУ • ДО ВОКЗАЛУ",journeyBtn.centerX(),journeyBtn.centerY()+dp(4),text);
+            String journeyLabel=year>=7?"ДО ШКІЛЬНИХ ПРИГОД":(year>=2?"НА САНЧАТА • ДО ВОКЗАЛУ":"ЗАБРАТИ ПОСИЛКУ • ДО ВОКЗАЛУ");
+            c.drawText(journeyLabel,journeyBtn.centerX(),journeyBtn.centerY()+dp(4),text);
 
             replayBtn.set(card.left+dp(45),card.bottom-dp(51),card.right-dp(45),card.bottom-dp(12));
             p.setColor(Color.rgb(238,246,250));c.drawRoundRect(replayBtn,dp(16),dp(16),p);text.setTextSize(tx(8));text.setColor(Color.rgb(76,118,142));c.drawText("ЩЕ РАЗ У ЦЬОМУ РОЦІ",replayBtn.centerX(),replayBtn.centerY()+dp(3),text);
