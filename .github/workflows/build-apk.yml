@@ -40,6 +40,9 @@ jobs:
       - name: Apply v12.2 story consistency
         run: python3 scripts/apply_storyfix_v12_2.py
 
+      - name: Apply v13 Uklon driver transport
+        run: python3 scripts/apply_uklon_v13.py
+
       - name: Build unsigned release APK
         run: gradle assembleRelease --stacktrace --no-daemon
 
