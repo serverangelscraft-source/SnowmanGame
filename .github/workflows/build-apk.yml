@@ -28,6 +28,9 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
+      - name: Apply v10 gameplay polish
+        run: python3 scripts/apply_polish_v10.py
+
       - name: Build APK
         run: gradle assembleDebug --stacktrace --no-daemon
 
