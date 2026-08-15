@@ -3,6 +3,7 @@ package com.snowmangame;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.*;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,14 +32,26 @@ public class DeliveryActivity extends Activity {
         static final int PACKAGE=0, OPENED=1, RIDE=2, ARRIVED=3;
         final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),text=new Paint(Paint.ANTI_ALIAS_FLAG),stroke=new Paint(Paint.ANTI_ALIAS_FLAG);
         final Context ctx;
+        final SharedPreferences prefs;
         final float density,textScale;
         final RectF action=new RectF();
-        int stage=PACKAGE;
+        final int year;
+        final boolean firstDelivery;
+        int stage;
         float safeTop,safeBottom;
         long stageStart=SystemClock.elapsedRealtime();
 
         DeliveryView(Context c){
             super(c);ctx=c;
+            prefs=c.getSharedPreferences("snowman_game",Context.MODE_PRIVATE);
+            year=Math.max(1,Math.min(7,prefs.getInt("life_year",1)));
+            boolean unlocked=prefs.getBoolean("sled_unlocked",false);
+            if(year>=2&&!unlocked){
+                unlocked=true;
+                prefs.edit().putBoolean("sled_unlocked",true).apply();
+            }
+            firstDelivery=!unlocked&&year==1;
+            stage=firstDelivery?PACKAGE:RIDE;
             density=getResources().getDisplayMetrics().density;
             textScale=Math.min(getResources().getDisplayMetrics().scaledDensity,density*1.16f);
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
@@ -161,7 +174,7 @@ public class DeliveryActivity extends Activity {
 
         void drawRide(Canvas c,float t){
             float w=getWidth(),h=getHeight(),bottom=h-safeBottom;
-            drawHeader(c,"До вокзалу!","Санчата вперше везуть сніговика у велику подорож");
+            drawHeader(c,"До вокзалу!",firstDelivery?"Санчата вперше везуть сніговика у велику подорож":"Санчата вже наші — їдемо до вокзалу без нової посилки");
             float k=smooth(t/4.8f),roadY=bottom*.69f;
             p.setColor(Color.argb(90,96,148,170));
             for(int i=0;i<10;i++){
@@ -187,15 +200,17 @@ public class DeliveryActivity extends Activity {
 
         void drawArrived(Canvas c,float t){
             float w=getWidth(),h=getHeight(),bottom=h-safeBottom;
-            drawHeader(c,"Приїхали на вокзал","Санчата виконали свою першу транспортну місію");
+            drawHeader(c,"Приїхали на вокзал",firstDelivery?"Санчата виконали свою першу транспортну місію":"Санчата знову довезли сніговика до вокзалу");
             float ground=bottom*.70f;
             drawStation(c,w,h);
             drawSled(c,w*.30f,ground,1f);
             drawSnowman(c,w*.30f,ground-dp(30),dp(29),.8f);
             RectF teaser=new RectF(dp(20),safeTop+dp(126),w-dp(20),safeTop+dp(222));
             p.setColor(Color.argb(240,255,255,255));c.drawRoundRect(teaser,dp(22),dp(22),p);
-            text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(12));text.setColor(Color.rgb(45,84,107));c.drawText("ТРАНСПОРТ ВІДКРИТО: САНЧАТА",teaser.centerX(),teaser.top+dp(30),text);
-            text.setTextSize(tx(8));text.setColor(Color.rgb(91,127,146));c.drawText("На старших рівнях шлях стане довшим.",teaser.centerX(),teaser.top+dp(54),text);
+            text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(12));text.setColor(Color.rgb(45,84,107));
+            c.drawText(firstDelivery?"ТРАНСПОРТ ВІДКРИТО: САНЧАТА":"ТРАНСПОРТ: ЖОВТІ САНЧАТА",teaser.centerX(),teaser.top+dp(30),text);
+            text.setTextSize(tx(8));text.setColor(Color.rgb(91,127,146));
+            c.drawText(firstDelivery?"На старших рівнях шлях стане довшим.":"Посилка вже не повторюється — санчата збережені.",teaser.centerX(),teaser.top+dp(54),text);
             text.setTextSize(tx(8));text.setColor(Color.rgb(49,112,91));c.drawText("Тизер: згодом можна буде найняти водія Uklon.",teaser.centerX(),teaser.top+dp(76),text);
             text.setTextSize(tx(6.5f));text.setColor(Color.rgb(131,143,149));c.drawText("Uklon • ДЕМО-ТИЗЕР • неофіційна інтеграція",teaser.centerX(),teaser.top+dp(91),text);
 
@@ -239,7 +254,10 @@ public class DeliveryActivity extends Activity {
             float x=e.getX(),y=e.getY(),t=(SystemClock.elapsedRealtime()-stageStart)/1000f;
             if(!action.contains(x,y))return true;
             if(stage==PACKAGE&&t>1.1f){switchStage(OPENED);return true;}
-            if(stage==OPENED){switchStage(RIDE);return true;}
+            if(stage==OPENED){
+                prefs.edit().putBoolean("sled_unlocked",true).apply();
+                switchStage(RIDE);return true;
+            }
             if(stage==ARRIVED){
                 ctx.startActivity(new Intent(ctx,JourneyActivity.class));
                 ((Activity)ctx).finish();
