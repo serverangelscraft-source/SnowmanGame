@@ -115,8 +115,8 @@ public class DeliveryActivity extends Activity {
         void drawParcel(Canvas c,float x,float y,float scale){
             float bw=dp(116)*scale,bh=dp(82)*scale;
             RectF box=new RectF(x-bw/2,y-bh/2,x+bw/2,y+bh/2);
-            p.setColor(Color.rgb(249,207,55));c.drawRoundRect(box,dp(12)*scale,dp(12)*scale,p);
-            p.setColor(Color.rgb(226,176,32));c.drawRect(x-dp(8)*scale,box.top,x+dp(8)*scale,box.bottom,p);
+            p.setColor(Color.rgb(224,35,45));c.drawRoundRect(box,dp(12)*scale,dp(12)*scale,p);
+            p.setColor(Color.rgb(184,24,32));c.drawRect(x-dp(8)*scale,box.top,x+dp(8)*scale,box.bottom,p);
             RectF label=new RectF(x-dp(40)*scale,y-dp(18)*scale,x+dp(40)*scale,y+dp(18)*scale);
             p.setColor(Color.WHITE);c.drawRoundRect(label,dp(7)*scale,dp(7)*scale,p);
             text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(8)*scale);text.setColor(Color.rgb(215,52,60));c.drawText("НОВА ПОШТА",x,y-dp(1)*scale,text);
@@ -143,8 +143,8 @@ public class DeliveryActivity extends Activity {
 
         void drawParcelOpen(Canvas c,float x,float y,float pop){
             float bw=dp(92),bh=dp(58);RectF box=new RectF(x-bw/2,y-bh/2,x+bw/2,y+bh/2);
-            p.setColor(Color.rgb(249,207,55));c.drawRoundRect(box,dp(9),dp(9),p);
-            p.setColor(Color.rgb(226,176,32));
+            p.setColor(Color.rgb(224,35,45));c.drawRoundRect(box,dp(9),dp(9),p);
+            p.setColor(Color.rgb(184,24,32));
             Path lid=new Path();lid.moveTo(box.left,y-bh/2);lid.lineTo(x,y-bh*.78f-dp(18)*pop);lid.lineTo(box.right,y-bh/2);lid.close();c.drawPath(lid,p);
         }
 
