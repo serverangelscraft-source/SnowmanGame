@@ -31,6 +31,9 @@ jobs:
       - name: Apply v10 gameplay polish
         run: python3 scripts/apply_polish_v10.py
 
+      - name: Apply v11 Year 2 story
+        run: python3 scripts/apply_year2_v11.py
+
       - name: Build APK
         run: gradle assembleDebug --stacktrace --no-daemon
 
