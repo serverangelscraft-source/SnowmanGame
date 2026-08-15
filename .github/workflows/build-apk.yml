@@ -37,6 +37,9 @@ jobs:
       - name: Apply v12 season and wardrobe
         run: python3 scripts/apply_season_v12.py
 
+      - name: Apply v12.2 story consistency
+        run: python3 scripts/apply_storyfix_v12_2.py
+
       - name: Build unsigned release APK
         run: gradle assembleRelease --stacktrace --no-daemon
 
