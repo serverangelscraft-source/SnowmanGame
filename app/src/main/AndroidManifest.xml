@@ -23,6 +23,14 @@
             android:screenOrientation="portrait"
             android:exported="false"/>
         <activity
+            android:name=".YearThreeActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+        <activity
+            android:name=".MemoryActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+        <activity
             android:name=".SummerActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
