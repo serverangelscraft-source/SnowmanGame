@@ -52,3 +52,4 @@ exec(Path("scripts/apply_lifecore_v14.py").read_text(encoding="utf-8"), {"__name
 exec(Path("scripts/apply_memory_friend_v15.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_oblast_journey_v16.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_graphics_fit_v16_1.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
+exec(Path("scripts/apply_character_vyshyvanka_v17.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
