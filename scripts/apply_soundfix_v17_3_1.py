@@ -1,6 +1,7 @@
 from pathlib import Path
 
 paths={
+    "main":Path("app/src/main/java/com/snowmangame/MainActivity.java"),
     "delivery":Path("app/src/main/java/com/snowmangame/DeliveryActivity.java"),
     "journey":Path("app/src/main/java/com/snowmangame/JourneyActivity.java"),
     "school":Path("app/src/main/java/com/snowmangame/SchoolActivity.java"),
@@ -12,6 +13,14 @@ def rep(key,old,new,label):
     if old not in src[key]:
         raise SystemExit(f"v17.3.1 sound self-audit patch failed in {key} at: {label}")
     src[key]=src[key].replace(old,new,1)
+
+# v17.3 optional hook missed the later v14 wording of the winter-finish line.
+rep(
+    "main",
+    '            buzz(65);playTone(ToneGenerator.TONE_PROP_ACK,180);showFeedback(missionSuccess?"ЗИМА ПРОЖИТА • МІСІЯ +250":"ЗИМА ПРОЖИТА",true);invalidate();',
+    '            buzz(65);SoundFx.play(ctx,SoundFx.COMPLETE);showFeedback(missionSuccess?"ЗИМА ПРОЖИТА • МІСІЯ +250":"ЗИМА ПРОЖИТА",true);invalidate();',
+    "winter complete sound after v14 wording",
+)
 
 # v17.3 claimed transport sound, but the Year 1/2 sled DeliveryActivity had no hook at all.
 rep(
@@ -35,12 +44,12 @@ rep(
     "train door identity",
 )
 
-# Do not stack two reward jingles at exactly the same moment after the first lesson.
+# v17.3 optional hook missed the actual v17.1 completeLesson implementation.
 rep(
     "school",
-    'SoundFx.play(ctx,SoundFx.CORRECT);SoundFx.play(ctx,SoundFx.COMPLETE);invalidate();',
-    'SoundFx.play(ctx,SoundFx.COMPLETE);invalidate();',
-    "avoid doubled lesson-complete jingle",
+    '        void completeLesson(){int days=Math.max(0,prefs.getInt("school_days",0))+1;prefs.edit().putBoolean("school_first_day_complete",true).putBoolean("school_unlocked",true).putInt("school_days",days).putInt("school_stage",DONE).apply();stage=DONE;feedback="";buzz(45);invalidate();}',
+    '        void completeLesson(){int days=Math.max(0,prefs.getInt("school_days",0))+1;prefs.edit().putBoolean("school_first_day_complete",true).putBoolean("school_unlocked",true).putInt("school_days",days).putInt("school_stage",DONE).apply();stage=DONE;feedback="";buzz(45);SoundFx.play(ctx,SoundFx.COMPLETE);invalidate();}',
+    "school lesson complete sound",
 )
 
 for key,path in paths.items():
