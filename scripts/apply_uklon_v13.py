@@ -55,3 +55,4 @@ exec(Path("scripts/apply_graphics_fit_v16_1.py").read_text(encoding="utf-8"), {"
 exec(Path("scripts/apply_character_vyshyvanka_v17.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_ui_school_v17_1.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/run_teacher_mitten_v17_2.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
+exec(Path("scripts/apply_soundscape_v17_3.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
