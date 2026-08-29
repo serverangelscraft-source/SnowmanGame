@@ -60,3 +60,4 @@ exec(Path("scripts/apply_soundfix_v17_3_1.py").read_text(encoding="utf-8"), {"__
 exec(Path("scripts/apply_soft_audio_v17_3_3.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_uklon_direction_v17_3_4.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_schoollife_v17_4.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
+exec(Path("scripts/apply_grade2_v17_5.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
