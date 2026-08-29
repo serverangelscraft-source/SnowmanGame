@@ -17,6 +17,7 @@
         <activity android:name=".CharacterActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".WardrobeActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".SchoolActivity" android:screenOrientation="portrait" android:exported="false"/>
+        <activity android:name=".ClassOneActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
