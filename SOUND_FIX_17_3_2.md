@@ -1,0 +1,1 @@
+v17.3.2 replaces runtime AudioTrack synthesis with SoundPool playback from bundled WAV resources. The old synthesis path could fail silently on some Android devices because AudioTrack construction/playback errors were swallowed. SoundPool now uses real game audio assets and ToneGenerator remains only as a fallback if a sample cannot be loaded or played.
