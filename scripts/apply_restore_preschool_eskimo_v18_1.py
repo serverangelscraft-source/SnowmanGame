@@ -21,12 +21,17 @@ if old_btn not in main:
     raise SystemExit("v18.1 preschool Eskimo restore failed: result CTA")
 main=main.replace(old_btn,new_btn,1)
 
-sponsor_touch='if(sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}'
-journey_touch='if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}'
-if sponsor_touch not in main:
-    if journey_touch not in main:
-        raise SystemExit("v18.1 preschool Eskimo restore failed: journey touch anchor")
-    main=main.replace(journey_touch,sponsor_touch+'\n                    '+journey_touch,1)
+# Restore the old result interaction at a stable point before the finished-state
+# routing. Later story patches have changed the journey destination several times,
+# so do not anchor this restoration to any specific route activity.
+sponsor_guard='if(finished&&sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}'
+if sponsor_guard not in main:
+    pattern=r'(\s*performClick\(\);\s*\n)(\s*)if\(finished\)\{'
+    m=re.search(pattern,main)
+    if not m:
+        raise SystemExit("v18.1 preschool Eskimo restore failed: finished touch anchor")
+    replacement=m.group(1)+m.group(2)+sponsor_guard+'\n'+m.group(2)+'if(finished){'
+    main=main[:m.start()]+replacement+main[m.end():]
 
 main_path.write_text(main,encoding="utf-8")
 
