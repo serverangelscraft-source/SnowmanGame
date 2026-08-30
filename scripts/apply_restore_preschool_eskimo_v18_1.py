@@ -21,17 +21,21 @@ if old_btn not in main:
     raise SystemExit("v18.1 preschool Eskimo restore failed: result CTA")
 main=main.replace(old_btn,new_btn,1)
 
-# Restore the old result interaction at a stable point before the finished-state
-# routing. Later story patches have changed the journey destination several times,
-# so do not anchor this restoration to any specific route activity.
+# Insert the original Eskimo action specifically inside the ACTION_UP/CANCEL block,
+# immediately before that block's finished-state routing. This deliberately does
+# not depend on what later story version uses as the journey destination.
 sponsor_guard='if(finished&&sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}'
 if sponsor_guard not in main:
-    pattern=r'(\s*performClick\(\);\s*\n)(\s*)if\(finished\)\{'
-    m=re.search(pattern,main)
-    if not m:
-        raise SystemExit("v18.1 preschool Eskimo restore failed: finished touch anchor")
-    replacement=m.group(1)+m.group(2)+sponsor_guard+'\n'+m.group(2)+'if(finished){'
-    main=main[:m.start()]+replacement+main[m.end():]
+    action_marker='if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){'
+    a=main.find(action_marker)
+    if a<0:
+        raise SystemExit("v18.1 preschool Eskimo restore failed: ACTION_UP anchor")
+    f=main.find('if(finished){',a+len(action_marker))
+    if f<0:
+        raise SystemExit("v18.1 preschool Eskimo restore failed: finished state inside ACTION_UP")
+    line_start=main.rfind('\n',0,f)+1
+    indent=main[line_start:f]
+    main=main[:line_start]+indent+sponsor_guard+'\n'+main[line_start:]
 
 main_path.write_text(main,encoding="utf-8")
 
