@@ -63,3 +63,4 @@ exec(Path("scripts/apply_schoollife_v17_4.py").read_text(encoding="utf-8"), {"__
 exec(Path("scripts/apply_grade2_v17_5.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_realtime_schoolweek_v18.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
 exec(Path("scripts/apply_restore_preschool_eskimo_v18_1.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
+exec(Path("scripts/apply_schoolday_pacing_v18_2.py").read_text(encoding="utf-8"), {"__name__": "__main__"})
