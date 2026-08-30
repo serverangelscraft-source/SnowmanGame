@@ -7,13 +7,13 @@ main=main_path.read_text(encoding="utf-8")
 
 # v18 moved the school years to SchoolWeekActivity. Restore the original Eskimo
 # result interaction in MainActivity only; this activity is the pre-school life loop.
-old_draw='''            if(sponsorScene)sponsorScene=false;'''
-new_draw='''            if(sponsorScene){drawSponsor(c);postInvalidateOnAnimation();return;}'''
+old_draw='            if(sponsorScene)sponsorScene=false;'
+new_draw='            if(sponsorScene){drawSponsor(c);postInvalidateOnAnimation();return;}'
 if old_draw not in main:
     raise SystemExit("v18.1 preschool Eskimo restore failed: sponsor scene draw gate")
 main=main.replace(old_draw,new_draw,1)
 
-old_btn='''            sponsorBtn.setEmpty();'''
+old_btn='            sponsorBtn.setEmpty();'
 new_btn='''            sponsorBtn.set(card.left+dp(22),card.bottom-dp(178),card.right-dp(22),card.bottom-dp(128));
             p.setColor(sponsorRewarded?Color.rgb(188,190,193):Color.rgb(226,91,122));c.drawRoundRect(sponsorBtn,dp(18),dp(18),p);
             text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText(sponsorRewarded?"ЕСКІМОС УЖЕ СКУШТОВАНО":"СПРОБУВАТИ ЕСКІМОС +150",sponsorBtn.centerX(),sponsorBtn.centerY()+dp(3),text);'''
@@ -21,19 +21,12 @@ if old_btn not in main:
     raise SystemExit("v18.1 preschool Eskimo restore failed: result CTA")
 main=main.replace(old_btn,new_btn,1)
 
-old_touch='''                if(finished){
-                    
-                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}'''
-new_touch='''                if(finished){
-                    if(sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}
-                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}'''
-if old_touch not in main:
-    # Be tolerant if whitespace was normalized by another later patch.
-    old_touch='''                if(finished){
-                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}'''
-    if old_touch not in main:
-        raise SystemExit("v18.1 preschool Eskimo restore failed: result touch handler")
-main=main.replace(old_touch,new_touch,1)
+sponsor_touch='if(sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}'
+journey_touch='if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}'
+if sponsor_touch not in main:
+    if journey_touch not in main:
+        raise SystemExit("v18.1 preschool Eskimo restore failed: journey touch anchor")
+    main=main.replace(journey_touch,sponsor_touch+'\n                    '+journey_touch,1)
 
 main_path.write_text(main,encoding="utf-8")
 
