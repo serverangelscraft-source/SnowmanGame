@@ -47,19 +47,20 @@ public final class NotificationScheduler {
 
         Calendar now=Calendar.getInstance();
         long today=localDayNumber(now);
+        if(p.getLong("school_notify_last_sent_day",Long.MIN_VALUE)==today){scheduleNext(context);return;}
         long completed=p.getLong("school_player_last_completed_day",Long.MIN_VALUE);
         int school=Math.max(0,Math.min(5,p.getInt("school_year_school_done",0)));
         int weekend=Math.max(0,Math.min(2,p.getInt("school_year_weekend_done",0)));
         boolean yearComplete=p.getBoolean("school_year_complete",school>=5&&weekend>=2);
         long completeDay=p.getLong("school_year_complete_day",Long.MIN_VALUE);
+        int grade=Math.max(2,Math.min(11,p.getInt("school_grade",2)));
         int dow=now.get(Calendar.DAY_OF_WEEK);
         boolean weekday=dow>=Calendar.MONDAY&&dow<=Calendar.FRIDAY;
 
         if(completed==today){scheduleNext(context);return;}
         if(!yearComplete && ((weekday&&school>=5)||(!weekday&&weekend>=2))){scheduleNext(context);return;}
-        if(yearComplete && today<=completeDay){scheduleNext(context);return;}
+        if(yearComplete && (today<=completeDay || grade>=11)){scheduleNext(context);return;}
 
-        int grade=Math.max(2,Math.min(11,p.getInt("school_grade",2)));
         int total=school+weekend;
         long lastOpen=p.getLong("school_notify_last_open_day",today);
         long absent=Math.max(0,today-lastOpen);
@@ -121,6 +122,8 @@ public final class NotificationScheduler {
         int school=Math.max(0,Math.min(5,p.getInt("school_year_school_done",0)));
         int weekend=Math.max(0,Math.min(2,p.getInt("school_year_weekend_done",0)));
         boolean yearComplete=p.getBoolean("school_year_complete",school>=5&&weekend>=2);
+        int grade=Math.max(2,Math.min(11,p.getInt("school_grade",2)));
+        if(yearComplete&&grade>=11)return;
         long completeDay=p.getLong("school_year_complete_day",Long.MIN_VALUE);
         long completed=p.getLong("school_player_last_completed_day",Long.MIN_VALUE);
         Calendar now=Calendar.getInstance();
