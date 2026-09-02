@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:theme="@style/AppTheme"
         android:label="Зліпи сніговика"
@@ -19,6 +21,8 @@
         <activity android:name=".SchoolActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".ClassOneActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".SchoolWeekActivity" android:screenOrientation="portrait" android:exported="false"/>
+        <activity android:name=".SchoolCallActivity" android:screenOrientation="portrait" android:exported="false"/>
+        <activity android:name=".SnowSwimActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
@@ -51,5 +55,16 @@
             android:name=".JourneyActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
+        <receiver
+            android:name=".SnowReminderReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+                <action android:name="android.intent.action.DATE_CHANGED"/>
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

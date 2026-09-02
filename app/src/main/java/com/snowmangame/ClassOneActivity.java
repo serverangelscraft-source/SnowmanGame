@@ -134,7 +134,7 @@ public class ClassOneActivity extends Activity {
         void drawYard(Canvas c){
             float w=getWidth(),bottom=getHeight()-safeBottom,ground=bottom*.72f;
             RectF info=new RectF(dp(20),safeTop+dp(140),w-dp(20),safeTop+dp(230));p.setColor(Color.argb(243,255,255,255));c.drawRoundRect(info,dp(22),dp(22),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(10));text.setColor(Color.rgb(57,94,113));c.drawText(yardDone?"Три влучання. 1-А офіційно на подвір’ї.":"Торкнись трьох снігових мішеней",info.centerX(),info.top+dp(36),text);text.setTextSize(tx(7));text.setColor(Color.rgb(101,128,140));c.drawText("Сніжик рахує влучання: "+Integer.bitCount(yardMask)+"/3",info.centerX(),info.bottom-dp(20),text);
-            float[] xs={w*.27f,w*.52f,w*.76f},[]ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};
+            float[] xs={w*.27f,w*.52f,w*.76f}, ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};
             for(int i=0;i<3;i++){float r=dp(37);targets[i].set(xs[i]-r,ys[i]-r,xs[i]+r,ys[i]+r);boolean hit=(yardMask&(1<<i))!=0;p.setColor(hit?Color.rgb(222,239,234):Color.argb(238,255,255,255));c.drawCircle(xs[i],ys[i],r,p);stroke.setColor(hit?Color.rgb(65,148,117):Color.rgb(86,149,181));stroke.setStrokeWidth(dp(3));c.drawCircle(xs[i],ys[i],r-dp(5),stroke);c.drawCircle(xs[i],ys[i],r-dp(17),stroke);if(hit){text.setTextSize(tx(18));text.setColor(Color.rgb(65,148,117));c.drawText("✓",xs[i],ys[i]+dp(7),text);}}
             drawHero(c,w*.28f,ground,dp(31),.65f);drawFriend(c,w*.72f,ground,dp(27),.65f);
             if(yardDone)button(c,"НАЗАД ДО КЛАСУ");else action.setEmpty();

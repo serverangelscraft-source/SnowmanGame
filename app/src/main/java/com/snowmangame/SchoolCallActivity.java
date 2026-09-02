@@ -1,0 +1,26 @@
+package com.snowmangame;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.*;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.Window;
+import java.util.Calendar;
+
+public class SchoolCallActivity extends Activity {
+    @Override public void onCreate(Bundle b){super.onCreate(b);Window w=getWindow();if(Build.VERSION.SDK_INT>=21){w.setStatusBarColor(Color.BLACK);w.setNavigationBarColor(Color.BLACK);}setContentView(new CallView(this));}
+    static class CallView extends View {
+        final Context ctx;final SharedPreferences prefs;final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),t=new Paint(Paint.ANTI_ALIAS_FLAG);final RectF endBtn=new RectF();final float d,ts;final long started=SystemClock.elapsedRealtime();boolean recorded=false;
+        CallView(Context c){super(c);ctx=c;prefs=c.getSharedPreferences("snowman_game",MODE_PRIVATE);d=getResources().getDisplayMetrics().density;ts=Math.min(getResources().getDisplayMetrics().scaledDensity,d*1.12f);t.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));setClickable(true);}
+        float dp(float v){return v*d;}float tx(float v){return v*ts;}long callDay(){Calendar c=Calendar.getInstance();return c.get(Calendar.YEAR)*1000L+c.get(Calendar.DAY_OF_YEAR);}long localDay(){Calendar c=Calendar.getInstance();java.util.GregorianCalendar u=new java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("UTC"));u.clear();u.set(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH));return u.getTimeInMillis()/86400000L;}
+        String line(){Calendar c=Calendar.getInstance();int dow=c.get(Calendar.DAY_OF_WEEK),school=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));if(prefs.getLong("school_player_last_completed_day",Long.MIN_VALUE)==localDay())return"Я вже вдома. Сьогоднішній день ми прожили.";switch(dow){case Calendar.MONDAY:return"У нас перерва. Пан Криж сказав, що сьогодні працюємо в парі.";case Calendar.TUESDAY:return"Ми рахували сніжки. Сніжик знову зробив вигляд, що не знає відповідь.";case Calendar.WEDNESDAY:return"Все добре. Після уроків ще буде вечеря "+Math.min(5,school+1)+"/5.";case Calendar.THURSDAY:return"Іскрик сьогодні сів поруч. Я не загубив рукавички.";default:return"П'ятниця. Ми вже майже закрили навчальний тиждень.";}}
+        @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();LinearGradient g=new LinearGradient(0,0,0,h,Color.rgb(22,37,50),Color.rgb(5,12,18),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);long ms=SystemClock.elapsedRealtime()-started;boolean connected=ms>1700;t.setTextAlign(Paint.Align.CENTER);t.setColor(Color.WHITE);t.setTextSize(tx(8));c.drawText(connected?"НА ЗВ'ЯЗКУ":"ВИКЛИК...",w/2f,dp(72),t);drawSnow(c,w/2f,dp(250),dp(68));t.setTextSize(tx(20));c.drawText("Сніговичок • "+Math.max(2,prefs.getInt("school_grade",2))+"-А",w/2f,dp(360),t);t.setTextSize(tx(7));t.setColor(Color.rgb(175,202,219));c.drawText(connected?"перерва у школі":"чекаємо, поки візьме слухавку",w/2f,dp(390),t);RectF bubble=new RectF(dp(28),dp(430),w-dp(28),dp(565));p.setColor(Color.argb(30,255,255,255));c.drawRoundRect(bubble,dp(24),dp(24),p);t.setTextAlign(Paint.Align.LEFT);t.setTextSize(tx(8));t.setColor(Color.WHITE);if(connected){drawWrapped(c,line(),bubble.left+dp(18),bubble.top+dp(35),bubble.width()-dp(36),dp(25));if(!recorded){recorded=true;long cd=callDay();if(prefs.getLong("school_call_last_day",Long.MIN_VALUE)!=cd)prefs.edit().putLong("school_call_last_day",cd).putInt("school_calls_total",prefs.getInt("school_calls_total",0)+1).putString("school_call_last_text",line()).apply();SoundFx.play(ctx,SoundFx.PHONE);}}else{t.setTextAlign(Paint.Align.CENTER);c.drawText("...",bubble.centerX(),bubble.centerY(),t);}endBtn.set(dp(55),h-dp(115),w-dp(55),h-dp(45));p.setColor(Color.rgb(187,59,57));c.drawRoundRect(endBtn,dp(28),dp(28),p);t.setTextAlign(Paint.Align.CENTER);t.setTextSize(tx(8));t.setColor(Color.WHITE);c.drawText("ЗАВЕРШИТИ ДЗВІНОК",endBtn.centerX(),endBtn.centerY()+dp(3),t);if(!connected)postInvalidateOnAnimation();}
+        void drawWrapped(Canvas c,String s,float x,float y,float max,float lh){String[] words=s.split(" ");String line="";for(String w:words){String n=line.length()==0?w:line+" "+w;if(t.measureText(n)>max&&line.length()>0){c.drawText(line,x,y,t);y+=lh;line=w;}else line=n;}if(line.length()>0)c.drawText(line,x,y,t);}void drawSnow(Canvas c,float x,float y,float r){p.setColor(Color.WHITE);c.drawCircle(x,y+r*.55f,r,p);c.drawCircle(x,y-r*.35f,r*.72f,p);c.drawCircle(x,y-r*1.12f,r*.53f,p);p.setColor(Color.rgb(40,50,58));c.drawCircle(x-r*.16f,y-r*1.20f,r*.05f,p);c.drawCircle(x+r*.16f,y-r*1.20f,r*.05f,p);p.setColor(Color.rgb(242,117,32));Path nose=new Path();nose.moveTo(x,y-r*1.10f);nose.lineTo(x+r*.55f,y-r*1.04f);nose.lineTo(x,y-r*.98f);nose.close();c.drawPath(nose,p);}
+        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP&&endBtn.contains(e.getX(),e.getY())){performClick();((Activity)ctx).finish();return true;}return true;}@Override public boolean performClick(){super.performClick();return true;}
+    }
+}
