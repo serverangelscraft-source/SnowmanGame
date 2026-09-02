@@ -28,22 +28,7 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Apply v10 gameplay polish
-        run: python3 scripts/apply_polish_v10.py
-
-      - name: Apply v11 Year 2 story
-        run: python3 scripts/apply_year2_v11.py
-
-      - name: Apply v12 season and wardrobe
-        run: python3 scripts/apply_season_v12.py
-
-      - name: Apply v12.2 story consistency
-        run: python3 scripts/apply_storyfix_v12_2.py
-
-      - name: Apply v13 Uklon driver transport
-        run: python3 scripts/apply_uklon_v13.py
-
-      - name: Build unsigned release APK
+      - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
 
       - name: Decode stable prototype update key
