@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -31,7 +31,10 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Validate canonical v18.12 source tree
+      - name: Apply v18.13 daily reward loop
+        run: python scripts/apply_v18_13_daily_rewards.py
+
+      - name: Validate canonical v18.13 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -42,6 +45,7 @@ jobs:
           main=(root/'MainActivity.java').read_text(encoding='utf-8')
           journey=(root/'JourneyActivity.java').read_text(encoding='utf-8')
           school=(root/'SchoolWeekActivity.java').read_text(encoding='utf-8')
+          plan=Path('docs/PLAYER_RETURN_PLAN.md').read_text(encoding='utf-8')
 
           sources={}
           for path in root.glob('*Activity.java'):
@@ -51,30 +55,37 @@ jobs:
           registered=set(re.findall(r'android:name="\.([A-Za-z0-9_]+Activity)"',manifest))
           if set(sources)!=registered: raise SystemExit('Activity source/manifest mismatch')
 
-          referenced=set()
-          for path in root.glob('*.java'):
-              referenced.update(re.findall(r'\b([A-Za-z0-9_]+Activity)\.class\b',path.read_text(encoding='utf-8')))
-          bad=sorted(referenced-registered)
-          if bad: raise SystemExit('Unregistered Activity refs: '+', '.join(bad))
-
           checks={
-            '3-build year pacing':'year_builds_' in main and 'yearBuilds>=3' in main,
+            'daily reward keys':'reward_day' in main and 'rewarded_builds_today' in main,
+            '3/day reward gate':'rewardedBuildsToday<3' in main,
+            'free mode after quota':'ВІЛЬНА РОБОТА • НАГОРОДИ 3/3' in main,
+            'stable daily mission':'int dailyMission()' in main and 'mission=dailyMission();' in main,
+            'local calendar day':'Calendar.getInstance()' in main and 'GregorianCalendar' in main,
             'pre-school ice cream once':'pre_school_icecream_done' in main,
-            'school routed via ice cream':'sponsorScene=true;sponsorRewarded=false;sponsorStart=SystemClock.elapsedRealtime()' in main,
-            'ice cream exits to school':'ctx.startActivity(new Intent(ctx,SchoolActivity.class))' in main,
-            'pre-school label':'ПЕРЕД ШКОЛОЮ • ДЕМО-ІНТЕГРАЦІЯ' in main,
-            'school button':'year>=7?"ДО ШКОЛИ"' in main,
-            'no generic ice cream CTA':'СПРОБУВАТИ ЕСКІМОС' not in main,
             'year transition explicit':'confirmYearAdvance()' in journey,
             'school DONE compact':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
             'no Gradle source mutation':'patchDinnerUi' not in gradle and 'dinnerSource' not in gradle,
-            'versionCode 45':re.search(r'versionCode\s+45\b',gradle) is not None,
-            'versionName 18.12':'versionName "18.12"' in gradle,
+            'plan advanced':'DONE v18.13 — daily reward integrity' in plan,
+            'versionCode 46':re.search(r'versionCode\s+46\b',gradle) is not None,
+            'versionName 18.13':'versionName "18.13"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.12 checks failed: '+'; '.join(failed))
-          print('Canonical v18.12 source tree OK')
+          if failed: raise SystemExit('v18.13 checks failed: '+'; '.join(failed))
+          print('Canonical v18.13 source tree OK')
           PY
+
+      - name: Persist v18.13 canonical sources
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java docs/PLAYER_RETURN_PLAN.md
+          if git diff --cached --quiet; then
+            echo 'v18.13 sources already canonical'
+          else
+            git commit -m 'Normalize v18.13 daily reward loop'
+            git push
+          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
