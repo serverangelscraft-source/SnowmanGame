@@ -20,6 +20,8 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 public class SchoolWeekActivity extends Activity {
+    private SchoolWeekView schoolView;
+
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         Window w=getWindow();
@@ -31,8 +33,14 @@ public class SchoolWeekActivity extends Activity {
             w.getDecorView().setSystemUiVisibility(flags);
         }
         if(Build.VERSION.SDK_INT>=29)w.setNavigationBarContrastEnforced(false);
-        setContentView(new SchoolWeekView(this));
+        schoolView=new SchoolWeekView(this);
+        setContentView(schoolView);
         NotificationScheduler.onSchoolOpened(this);
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(schoolView!=null)schoolView.refreshDateIfNeeded();
     }
 
     static class SchoolWeekView extends View {
@@ -76,7 +84,7 @@ public class SchoolWeekActivity extends Activity {
             long lastSeen=prefs.getLong("school_player_last_seen_day",prefs.getLong("school_clock_last_seen_day",today));
             effectiveDay=Math.max(today,lastSeen);
             if(today>lastSeen)lastSeen=today;
-            calendarDow=dayOfWeek(effectiveDay);
+            calendarDow=dayOfWeek(today);
             grade=Math.max(2,Math.min(11,prefs.getInt("school_grade",2)));
 
             if(!prefs.getBoolean("school_playerpaced_v18_4",false)){
@@ -87,6 +95,10 @@ public class SchoolWeekActivity extends Activity {
                 if(oldTotal>0&&oldMeals>0&&migratedSchool==0&&inYear>0)migratedSchool=Math.min(5,Math.min(inYear,oldMeals));
                 int migratedWeekend=Math.min(2,Math.max(0,inYear-migratedSchool));
                 prefs.edit().putBoolean("school_playerpaced_v18_4",true).putInt("school_year_school_done",migratedSchool).putInt("school_year_weekend_done",migratedWeekend).putBoolean("school_year_complete",migratedSchool>=5&&migratedWeekend>=2).putLong("school_player_last_seen_day",lastSeen).apply();
+            }
+
+            if(prefs.getBoolean("school_year_complete",false) && !prefs.contains("school_year_complete_day")){
+                prefs.edit().putLong("school_year_complete_day",effectiveDay).apply();
             }
 
             schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));
@@ -102,7 +114,7 @@ public class SchoolWeekActivity extends Activity {
             winter=grade+6;
             long completedDay=prefs.getLong("school_player_last_completed_day",prefs.getLong("school_clock_last_completed_day",Long.MIN_VALUE));
             long stageDay=prefs.getLong("school_player_stage_day",Long.MIN_VALUE);
-            if(yearComplete&&completeDay==effectiveDay)stage=YEAR_DONE;
+            if(yearComplete&&(completeDay==effectiveDay||grade>=11))stage=YEAR_DONE;
             else if(completedDay==effectiveDay)stage=DONE;
             else if(yearIntro)stage=INTRO;
             else if(stageDay==effectiveDay)stage=prefs.getInt("school_player_stage",defaultStage());
@@ -110,6 +122,13 @@ public class SchoolWeekActivity extends Activity {
 
             bagMask=prefs.getInt("school_player_bag_mask",0);miniHits=prefs.getInt("school_player_mini_hits",0);homeStep=prefs.getInt("school_player_home_step",0);dinnerBites=prefs.getInt("school_player_dinner_bites",0);weekendChoice=prefs.getString("school_player_weekend_choice","");mistakes=Math.max(0,prefs.getInt("school_mistakes",0));
             prefs.edit().putLong("school_player_last_seen_day",lastSeen).putLong("school_player_stage_day",effectiveDay).putInt("school_player_stage",stage).putInt("school_grade",grade).putInt("school_winter",winter).putBoolean("class2_started",true).apply();
+        }
+
+        void refreshDateIfNeeded(){
+            long now=localDayNumber();
+            if(now==today)return;
+            initState();
+            invalidate();
         }
 
         int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}
@@ -155,7 +174,7 @@ public class SchoolWeekActivity extends Activity {
 
         void drawBonus(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"СЬОГОДНІ • "+dayName(),r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"Цей тип дня вже зараховано",r.top+dp(72),18,Color.rgb(43,105,139));String need=schoolDone<5?("Ще потрібно навчальних днів: "+(5-schoolDone)):("Ще потрібно вихідних: "+(2-weekendDone));centerText(c,need,r.top+dp(109),8,Color.rgb(99,125,136));centerText(c,"Можна зайти до спогадів або гардероба. Рік не прокручується сам.",r.top+dp(137),7,Color.rgb(99,125,136));drawHero(c,r.centerX()-dp(38),r.bottom-dp(44),dp(35));drawFriend(c,r.centerX()+dp(50),r.bottom-dp(44),dp(28));drawBottomTools(c);}
         void drawDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,className()+" • ПРОЖИТО "+totalDone()+"/7",r.top+dp(29),7,Color.rgb(109,132,140));centerText(c,"СЬОГОДНІШНІЙ ДЕНЬ ПРОЖИТО",r.top+dp(72),20,Color.rgb(42,106,141));String detail=isWeekday()?("Навчання "+schoolDone+"/5 • остання вечеря: "+prefs.getString("school_meal_last","—")):("Вихідні "+weekendDone+"/2 • "+prefs.getString("school_weekend_last","день прожито"));centerText(c,detail,r.top+dp(106),7.5f,Color.rgb(95,121,133));RectF lock=new RectF(r.left+dp(25),r.top+dp(137),r.right-dp(25),r.top+dp(215));p.setColor(Color.rgb(235,245,249));c.drawRoundRect(lock,dp(19),dp(19),p);centerTextAt(c,"НАСТУПНИЙ ДЕНЬ МОЖНА ПРОЖИТИ НЕ РАНІШЕ ЗАВТРА",lock.centerX(),lock.top+dp(30),6.7f,Color.rgb(105,129,139));centerTextAt(c,"Пропустиш завтра — прогрес залишиться "+totalDone()+"/7",lock.centerX(),lock.bottom-dp(20),7.8f,Color.rgb(50,104,134));drawHero(c,r.centerX()-dp(36),r.bottom-dp(40),dp(35));drawFriend(c,r.centerX()+dp(48),r.bottom-dp(40),dp(28));drawBottomTools(c);}
-        void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
+        void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
         void drawBottomTools(Canvas c){float w=getWidth(),bottom=getHeight()-safeBottom,gap=dp(8),half=(w-dp(48)-gap)/2f;memoryBtn.set(dp(20),bottom-dp(70),dp(20)+half,bottom-dp(13));wardrobeBtn.set(memoryBtn.right+gap,bottom-dp(70),w-dp(20),bottom-dp(13));p.setColor(Color.rgb(232,243,237));c.drawRoundRect(memoryBtn,dp(18),dp(18),p);p.setColor(Color.rgb(235,243,248));c.drawRoundRect(wardrobeBtn,dp(18),dp(18),p);centerTextAt(c,"СПОГАДИ",memoryBtn.centerX(),memoryBtn.centerY()+dp(3),7.5f,Color.rgb(58,106,91));centerTextAt(c,"ГАРДЕРОБ",wardrobeBtn.centerX(),wardrobeBtn.centerY()+dp(3),7.5f,Color.rgb(60,103,127));}
 
         void drawDish(Canvas c,float x,float y,float r,int kind){p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);if(kind==0){p.setColor(Color.rgb(167,57,45));c.drawOval(new RectF(x-r*.70f,y-r*.27f,x+r*.70f,y+r*.25f),p);p.setColor(Color.rgb(247,245,226));c.drawCircle(x+r*.18f,y-r*.05f,r*.12f,p);}else if(kind==1){p.setColor(Color.rgb(238,205,145));for(int i=-1;i<=1;i++)c.drawOval(new RectF(x+i*r*.38f-r*.24f,y-r*.12f,x+i*r*.38f+r*.24f,y+r*.17f),p);}else if(kind==2){p.setColor(Color.rgb(112,152,88));for(int i=-1;i<=1;i++)c.drawRoundRect(new RectF(x+i*r*.35f-r*.20f,y-r*.15f,x+i*r*.35f+r*.20f,y+r*.16f),r*.08f,r*.08f,p);}else if(kind==3){p.setColor(Color.rgb(210,155,63));for(int i=-1;i<=1;i++)c.drawCircle(x+i*r*.34f,y,r*.22f,p);}else{p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-r*.68f,y-r*.25f,x+r*.68f,y+r*.24f),p);p.setColor(Color.rgb(250,245,223));for(int i=-2;i<=2;i++)c.drawCircle(x+i*r*.20f,y-r*.03f,r*.055f,p);}}
