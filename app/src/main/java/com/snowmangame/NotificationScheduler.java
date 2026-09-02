@@ -51,7 +51,7 @@ public final class NotificationScheduler {
         long completed=p.getLong("school_player_last_completed_day",Long.MIN_VALUE);
         int school=Math.max(0,Math.min(5,p.getInt("school_year_school_done",0)));
         int weekend=Math.max(0,Math.min(2,p.getInt("school_year_weekend_done",0)));
-        boolean yearComplete=p.getBoolean("school_year_complete",school>=5&&weekend>=2);
+        boolean yearComplete=p.getBoolean("school_year_complete",false) || (school>=5&&weekend>=2);
         long completeDay=p.getLong("school_year_complete_day",Long.MIN_VALUE);
         int grade=Math.max(2,Math.min(11,p.getInt("school_grade",2)));
         int dow=now.get(Calendar.DAY_OF_WEEK);
@@ -121,7 +121,7 @@ public final class NotificationScheduler {
         PendingIntent pi=alarmIntent(context);am.cancel(pi);
         if(!p.getBoolean("class2_started",false)||!p.getBoolean("school_notifications_enabled",true))return;
         int school=Math.max(0,Math.min(5,p.getInt("school_year_school_done",0))),weekend=Math.max(0,Math.min(2,p.getInt("school_year_weekend_done",0))),grade=Math.max(2,Math.min(11,p.getInt("school_grade",2)));
-        boolean yearComplete=p.getBoolean("school_year_complete",school>=5&&weekend>=2);if(yearComplete&&grade>=11)return;
+        boolean yearComplete=p.getBoolean("school_year_complete",false) || (school>=5&&weekend>=2);if(yearComplete&&grade>=11)return;
         long completeDay=p.getLong("school_year_complete_day",Long.MIN_VALUE),completed=p.getLong("school_player_last_completed_day",Long.MIN_VALUE);Calendar now=Calendar.getInstance();
         for(int offset=0;offset<16;offset++){
             Calendar c=(Calendar)now.clone();c.add(Calendar.DAY_OF_YEAR,offset);int dow=c.get(Calendar.DAY_OF_WEEK);boolean weekday=dow>=Calendar.MONDAY&&dow<=Calendar.FRIDAY;long day=localDayNumber(c);if(day==completed)continue;boolean useful;int hour,minute;
