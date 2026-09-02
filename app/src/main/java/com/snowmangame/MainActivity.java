@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
         float density, textScale, safeTop, safeBottom;
         boolean compact, narrow, finished, rolling, ballReady, draggingBall, sponsorScene, sponsorRewarded, coinsAwarded;
         int balls, score, bestScore, buildQuality, decorQuality, decorPlaced, combo;
-        int year, wallet, runCoins, mission;
+        int year, wallet, runCoins, mission, yearBuilds;
         long startTime, sponsorStart;
         int finishSeconds;
         boolean missionSuccess;
@@ -71,12 +71,13 @@ public class MainActivity extends Activity {
             bestScore=prefs.getInt("best_score",0);
             year=Math.max(1,Math.min(7,prefs.getInt("life_year",1)));
             wallet=Math.max(0,prefs.getInt("coins",0));
+            yearBuilds=Math.max(0,Math.min(3,prefs.getInt("year_builds_"+year,0)));
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeCap(Paint.Cap.ROUND);
             String[] names={"Очі","Морква","Ґудзики","Шарф","Шапка","Руки"};
             for(int i=0;i<ACCESSORY_COUNT;i++) items[i]=new Accessory(i,names[i]);
-            mission=rnd.nextInt(3);
+            mission=yearBuilds<3?yearBuilds:rnd.nextInt(3);
             setClickable(true);
             setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener(){
                 @Override public WindowInsets onApplyWindowInsets(View v,WindowInsets insets){
@@ -420,8 +421,7 @@ public class MainActivity extends Activity {
             if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){
                 performClick();
                 if(finished){
-                    if(sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}
-                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,year>=7?SchoolActivity.class:DeliveryActivity.class));((Activity)ctx).finish();return true;}
+                    if(journeyBtn.contains(x,y)&&(year>=7||yearBuilds>=3)){ctx.startActivity(new Intent(ctx,year>=7?SchoolActivity.class:DeliveryActivity.class));((Activity)ctx).finish();return true;}
                     if(replayBtn.contains(x,y)){reset();return true;}
                     return true;
                 }
@@ -477,7 +477,7 @@ public class MainActivity extends Activity {
             if(missionSuccess)score+=250;
             finished=true;
             if(!coinsAwarded){
-                runCoins=Math.max(1,score/300);wallet+=runCoins;coinsAwarded=true;prefs.edit().putInt("coins",wallet).apply();
+                runCoins=Math.max(1,score/300);wallet+=runCoins;coinsAwarded=true;yearBuilds=Math.min(3,yearBuilds+1);prefs.edit().putInt("coins",wallet).putInt("year_builds_"+year,yearBuilds).apply();
             }
             if(score>bestScore){bestScore=score;prefs.edit().putInt("best_score",bestScore).apply();}
             buzz(65);invalidate();
@@ -500,12 +500,15 @@ public class MainActivity extends Activity {
             p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(246,239,232));c.drawRoundRect(badge,dp(15),dp(15),p);text.setTextSize(tx(8));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО +250":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()+dp(3),text);
 
             sponsorBtn.set(card.left+dp(22),card.bottom-dp(178),card.right-dp(22),card.bottom-dp(128));
-            p.setColor(sponsorRewarded?Color.rgb(188,190,193):Color.rgb(226,91,122));c.drawRoundRect(sponsorBtn,dp(18),dp(18),p);
-            text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText(sponsorRewarded?"ЕСКІМОС УЖЕ СКУШТОВАНО":"СПРОБУВАТИ ЕСКІМОС +150",sponsorBtn.centerX(),sponsorBtn.centerY()+dp(3),text);
+            boolean yearReady=year>=7||yearBuilds>=3;
+            p.setColor(yearReady?Color.rgb(231,246,238):Color.rgb(239,245,248));c.drawRoundRect(sponsorBtn,dp(18),dp(18),p);
+            text.setTextSize(tx(8.4f));text.setColor(yearReady?Color.rgb(50,126,96):Color.rgb(79,119,140));
+            String yearProgress=year>=7?"ШКІЛЬНИЙ ЕТАП ВІДКРИТО":(yearReady?"3/3 • ПОДОРОЖ У НОВИЙ РІК ВІДКРИТО":"ПРОГРЕС РОКУ "+yearBuilds+"/3 • ЩЕ "+(3-yearBuilds)+" ДО ПОДОРОЖІ");
+            c.drawText(yearProgress,sponsorBtn.centerX(),sponsorBtn.centerY()+dp(3),text);
 
             journeyBtn.set(card.left+dp(22),card.bottom-dp(116),card.right-dp(22),card.bottom-dp(62));
-            p.setColor(Color.rgb(35,106,153));c.drawRoundRect(journeyBtn,dp(19),dp(19),p);text.setTextSize(tx(10.5f));text.setColor(Color.WHITE);
-            String journeyLabel=year>=7?"ДО ШКІЛЬНИХ ПРИГОД":(year>=2?"НА САНЧАТА • ДО ВОКЗАЛУ":"ЗАБРАТИ ПОСИЛКУ • ДО ВОКЗАЛУ");
+            p.setColor(yearReady?Color.rgb(35,106,153):Color.rgb(165,188,201));c.drawRoundRect(journeyBtn,dp(19),dp(19),p);text.setTextSize(tx(yearReady?10.5f:8.8f));text.setColor(Color.WHITE);
+            String journeyLabel=year>=7?"ДО ШКІЛЬНИХ ПРИГОД":(yearReady?(year>=2?"НА САНЧАТА • ДО ВОКЗАЛУ":"ЗАБРАТИ ПОСИЛКУ • ДО ВОКЗАЛУ"):("ЗРОБИ ЩЕ "+(3-yearBuilds)+" СНІГОВИК(И)"));
             c.drawText(journeyLabel,journeyBtn.centerX(),journeyBtn.centerY()+dp(4),text);
 
             replayBtn.set(card.left+dp(45),card.bottom-dp(51),card.right-dp(45),card.bottom-dp(12));
@@ -540,7 +543,7 @@ public class MainActivity extends Activity {
 
         void reset(){
             balls=0;score=0;buildQuality=0;decorQuality=0;decorPlaced=0;combo=0;finished=false;rolling=false;ballReady=false;draggingBall=false;draggingAccessory=-1;
-            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;mission=rnd.nextInt(3);giftType=-1;
+            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;mission=yearBuilds<3?yearBuilds:rnd.nextInt(3);giftType=-1;
             tip="Коти сніг пальцем — зроби першу кулю";rollX=Float.NaN;rollY=Float.NaN;
             for(Accessory a:items){a.placed=false;a.quality=0;a.x=a.y=0;}
             buzz(18);invalidate();
