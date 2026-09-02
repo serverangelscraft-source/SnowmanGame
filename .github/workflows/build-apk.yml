@@ -82,6 +82,67 @@ jobs:
               raise SystemExit('SchoolCallActivity finish pattern changed; review source')
           PY
 
+      - name: Harden school progression edge states
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          school_path = Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java')
+          gradle_path = Path('app/build.gradle')
+          s = school_path.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global s
+              if new in s:
+                  return
+              if old not in s:
+                  raise SystemExit('v18.7 patch failed: ' + label)
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              'public class SchoolWeekActivity extends Activity {\n    @Override public void onCreate(Bundle b){',
+              'public class SchoolWeekActivity extends Activity {\n    private SchoolWeekView schoolView;\n\n    @Override public void onCreate(Bundle b){',
+              'SchoolWeekActivity field')
+
+          replace_once(
+              '        setContentView(new SchoolWeekView(this));\n        NotificationScheduler.onSchoolOpened(this);\n    }',
+              '        schoolView=new SchoolWeekView(this);\n        setContentView(schoolView);\n        NotificationScheduler.onSchoolOpened(this);\n    }\n\n    @Override protected void onResume(){\n        super.onResume();\n        if(schoolView!=null)schoolView.refreshDateIfNeeded();\n    }',
+              'date refresh lifecycle')
+
+          replace_once(
+              '            calendarDow=dayOfWeek(effectiveDay);',
+              '            calendarDow=dayOfWeek(today);',
+              'calendar weekday source')
+
+          old = '            }\n\n            schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));'
+          new = '            }\n\n            if(prefs.getBoolean("school_year_complete",false) && !prefs.contains("school_year_complete_day")){\n                prefs.edit().putLong("school_year_complete_day",effectiveDay).apply();\n            }\n\n            schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));'
+          replace_once(old, new, 'legacy completed-year date')
+
+          replace_once(
+              '            if(yearComplete&&completeDay==effectiveDay)stage=YEAR_DONE;',
+              '            if(yearComplete&&(completeDay==effectiveDay||grade>=11))stage=YEAR_DONE;',
+              'grade 11 terminal state')
+
+          replace_once(
+              '        int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}',
+              '        void refreshDateIfNeeded(){\n            long now=localDayNumber();\n            if(now==today)return;\n            initState();\n            invalidate();\n        }\n\n        int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}',
+              'date refresh method')
+
+          replace_once(
+              'centerText(c,"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));',
+              'centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));',
+              'grade 11 completion copy')
+
+          school_path.write_text(s, encoding='utf-8')
+
+          g = gradle_path.read_text(encoding='utf-8')
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 40', g)
+          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "18.7"', g)
+          gradle_path.write_text(g, encoding='utf-8')
+          print('Applied SnowmanGame v18.7 school integrity fixes')
+          PY
+
       - name: Validate school-life integration
         run: |
           test -f app/src/main/java/com/snowmangame/SchoolWeekActivity.java
@@ -99,8 +160,11 @@ jobs:
           grep -q 'school_year_weekend_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
           grep -q 'NotificationScheduler.onSchoolOpened(this);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
           grep -q 'NotificationScheduler.onDayCompleted(ctx);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'versionCode 39' app/build.gradle
-          grep -q 'versionName "18.6"' app/build.gradle
+          grep -q 'calendarDow=dayOfWeek(today);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'refreshDateIfNeeded' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'grade>=11' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'versionCode 40' app/build.gradle
+          grep -q 'versionName "18.7"' app/build.gradle
           ! grep -q '\[\]ys=' app/src/main/java/com/snowmangame/ClassOneActivity.java
 
       - name: Persist normalized sources to main
@@ -118,7 +182,7 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Sources already normalized; nothing to persist.'
           else
-            git commit -m 'Normalize generated v18.6 gameplay sources'
+            git commit -m 'Normalize generated v18.7 gameplay sources'
             git push origin HEAD:main
           fi
 
