@@ -21,14 +21,31 @@ final class SnowmanStyle {
 
     static void drawSleeve(Canvas c,Paint p,Paint stroke,float density,float x1,float y1,float x2,float y2,float width,int region){
         if(region<=0)return;float mx=(x1+x2)/2f,my=(y1+y2)/2f,len=(float)Math.hypot(x2-x1,y2-y1),ang=(float)Math.toDegrees(Math.atan2(y2-y1,x2-x1));
-        c.save();c.rotate(ang,mx,my);RectF cloth=new RectF(mx-len*.47f,my-width/2f,mx+len*.47f,my+width/2f);p.setColor(Color.rgb(250,249,241));c.drawRoundRect(cloth,width*.27f,width*.27f,p);stroke.setColor(Color.argb(72,99,111,105));stroke.setStrokeWidth(Math.max(density*.7f,width*.04f));c.drawRoundRect(cloth,width*.27f,width*.27f,stroke);RectF band=new RectF(cloth.right-len*.30f,cloth.top+width*.13f,cloth.right-density*1.5f,cloth.bottom-width*.13f);drawPatternBand(c,p,density,band,region);c.restore();
+        c.save();c.rotate(ang,mx,my);
+        RectF cloth=new RectF(mx-len*.47f,my-width/2f,mx+len*.47f,my+width/2f);
+        p.setColor(Color.rgb(250,249,241));c.drawRoundRect(cloth,width*.27f,width*.27f,p);
+        p.setColor(Color.argb(24,45,66,73));c.drawRoundRect(new RectF(cloth.left,cloth.centerY(),cloth.right,cloth.bottom),width*.20f,width*.20f,p);
+        stroke.setColor(Color.argb(72,99,111,105));stroke.setStrokeWidth(Math.max(density*.7f,width*.04f));c.drawRoundRect(cloth,width*.27f,width*.27f,stroke);
+        RectF band=new RectF(cloth.right-len*.31f,cloth.top+width*.11f,cloth.right-density*1.5f,cloth.bottom-width*.11f);drawPatternBand(c,p,density,band,region);
+        stroke.setColor(Color.argb(55,111,104,96));stroke.setStrokeWidth(Math.max(density*.55f,width*.025f));c.drawLine(cloth.left+width*.22f,cloth.centerY(),band.left-width*.12f,cloth.centerY(),stroke);
+        c.restore();
     }
 
     static void drawPatternBand(Canvas c,Paint p,float density,RectF r,int region){
         int a,b,accent;switch(region){case 1:a=Color.rgb(177,49,57);b=Color.rgb(48,63,70);accent=Color.rgb(83,132,91);break;case 2:a=Color.rgb(190,48,54);b=Color.rgb(58,58,61);accent=Color.rgb(222,107,70);break;case 3:a=Color.rgb(146,69,72);b=Color.rgb(96,101,101);accent=Color.rgb(196,133,94);break;case 4:a=Color.rgb(61,105,157);b=Color.rgb(161,53,72);accent=Color.rgb(205,143,71);break;case 5:a=Color.rgb(119,38,47);b=Color.rgb(42,43,43);accent=Color.rgb(184,78,57);break;case 6:a=Color.rgb(45,47,46);b=Color.rgb(154,49,53);accent=Color.rgb(184,121,74);break;default:a=Color.rgb(37,38,38);b=Color.rgb(112,35,43);accent=Color.rgb(190,91,52);break;}
-        p.setColor(Color.rgb(248,246,236));c.drawRoundRect(r,density*2,density*2,p);float h=r.height(),step=Math.max(density*6.3f,h*.78f);int n=Math.max(2,(int)(r.width()/step)+1);
-        for(int i=0;i<n;i++){float x=r.left+i*step+step*.45f,y=r.centerY();if(region==2||region==4){p.setColor(i%2==0?a:b);c.drawRect(x-step*.09f,r.top+density*.6f,x+step*.09f,r.bottom-density*.6f,p);c.drawRect(x-step*.26f,y-h*.09f,x+step*.26f,y+h*.09f,p);}else{Path d=new Path();d.moveTo(x,y-h*.38f);d.lineTo(x+step*.29f,y);d.lineTo(x,y+h*.38f);d.lineTo(x-step*.29f,y);d.close();p.setColor(i%2==0?a:b);c.drawPath(d,p);p.setColor(accent);c.drawCircle(x,y,Math.max(density*.8f,h*.10f),p);}}
-        if(region>=5){p.setColor(b);float edge=Math.max(density*.75f,h*.07f);c.drawRect(r.left,r.top,r.right,r.top+edge,p);c.drawRect(r.left,r.bottom-edge,r.right,r.bottom,p);}
+        p.setColor(Color.rgb(248,246,236));c.drawRoundRect(r,density*2,density*2,p);
+        float h=r.height(),step=Math.max(density*5.2f,h*.62f);int n=Math.max(3,(int)(r.width()/step)+1);
+        for(int i=0;i<n;i++){
+            float x=r.left+i*step+step*.38f,y=r.centerY();
+            if(region==2||region==4){
+                p.setColor(i%2==0?a:b);c.drawRect(x-step*.08f,r.top+density*.7f,x+step*.08f,r.bottom-density*.7f,p);c.drawRect(x-step*.23f,y-h*.085f,x+step*.23f,y+h*.085f,p);
+                p.setColor(accent);c.drawCircle(x,y,Math.max(density*.65f,h*.075f),p);
+            }else{
+                Path d=new Path();d.moveTo(x,y-h*.34f);d.lineTo(x+step*.25f,y);d.lineTo(x,y+h*.34f);d.lineTo(x-step*.25f,y);d.close();p.setColor(i%2==0?a:b);c.drawPath(d,p);p.setColor(accent);c.drawCircle(x,y,Math.max(density*.75f,h*.09f),p);
+            }
+        }
+        p.setColor(Color.argb(48,82,73,67));float seam=Math.max(density*.45f,h*.035f);c.drawRect(r.left,r.centerY()-seam/2f,r.right,r.centerY()+seam/2f,p);
+        if(region>=5){p.setColor(b);float edge=Math.max(density*.7f,h*.06f);c.drawRect(r.left,r.top,r.right,r.top+edge,p);c.drawRect(r.left,r.bottom-edge,r.right,r.bottom,p);}
     }
 
     static void drawBow(Canvas c,Paint p,float density,float x,float y,float s){p.setColor(Color.rgb(199,64,83));Path a=new Path();a.moveTo(x,y);a.lineTo(x-s*1.5f,y-s*.8f);a.lineTo(x-s*1.3f,y+s*.8f);a.close();c.drawPath(a,p);Path b=new Path();b.moveTo(x,y);b.lineTo(x+s*1.5f,y-s*.8f);b.lineTo(x+s*1.3f,y+s*.8f);b.close();c.drawPath(b,p);c.drawCircle(x,y,Math.max(density*1.1f,s*.45f),p);}
