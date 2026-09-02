@@ -4,72 +4,93 @@ Updated: 2026-09-02
 Current Android build: v18.13
 
 ## Current state
-- Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one random mission, receive coins.
-- School-week branch is player-paced and the DONE/dinner phone layouts were recently enlarged.
+- Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one daily mission, receive coins on up to 3 rewarded builds per local calendar date.
+- After the 3 rewarded builds, sculpting remains fully playable as free work with no coin/progression payout.
+- School-week branch is player-paced; pre-school ice cream is a one-time story scene before school only.
+- DONE/dinner phone layouts are enlarged and `app/build.gradle` no longer rewrites Java source during preBuild.
 - A separate HTML mobile prototype explored a useful order loop: 3 paid jobs per day, unlimited free sculpting, 3 client choices and snow conditions.
 
 ## Confirmed problems
-1. **Daily reward farming — fixed in v18.13.** Android now stores `reward_day` + `rewarded_builds_today`; only the first 3 completed builds of the local calendar date award coins/progression. Later builds remain playable as free work.
-2. **Prototype daily counter is not actually daily.** `snowman_completed_today` is stored without a date key/reset, so after reaching 3 the paid quota can stay exhausted on following days.
-3. **Mission reroll — fixed in v18.13.** Mission is deterministic for local calendar day + year and stays unchanged through replays; it changes on a new local date.
-4. **Completion requires all 6 accessories.** This makes every run structurally similar and reduces expressive builds; it also makes speed missions partially artificial.
-5. **Top HUD prioritizes year/coins but does not show the day's meaningful allowance or today's special condition.
-6. **Build system debt:** `app/build.gradle` contains a preBuild source-rewrite patch for the dinner UI. It is idempotent, but canonical source should eventually contain the final UI directly so builds do not mutate Java source.
+1. **Daily reward farming — fixed in v18.13.** Android stores `reward_day` + `rewarded_builds_today`; only the first 3 completed builds of the local calendar date award coins/progression.
+2. **Prototype daily counter is still not actually daily.** `snowman_completed_today` is stored without a date key/reset, so the HTML prototype can remain exhausted on following days. Do not port this bug back into Android.
+3. **Mission reroll — fixed in v18.13.** Mission is deterministic for local calendar day + year and stays unchanged through replays.
+4. **Completion still requires all 6 accessories.** This makes every run structurally similar and reduces expressive builds; speed missions also become partly artificial.
+5. **Top HUD still prioritizes year/coins.** It should emphasize the current tactile task and today's special condition instead.
+6. **Build source mutation — fixed in v18.12.** Dinner UI is canonical in source; Gradle no longer patches Java before compilation.
 
 ## Direction to keep
 - No hard limit on creative/free sculpting.
-- Limit only *paid/progression* rewards: target 3 rewarded builds per calendar day.
+- Limit only paid/progression rewards to 3 rewarded builds per local calendar day.
 - Missing a day must never delete progress or break a streak.
-- Daily return should be curiosity-driven (new client/weather/material/story), not punishment-driven.
+- Daily return should be curiosity-driven (new condition/client/material/story), not punishment-driven.
 - Phone UI: one dominant action, 48dp+ touch targets, no important interaction behind system bars, minimal text while sculpting.
+- Story integrations must be clearly fictional/inspired; never claim an official brand partnership.
 
-## Next implementation priorities
+## Completed milestones
+### DONE v18.12 — pre-school story placement
+- Ice cream appears once before school, then is permanently marked complete.
+- It no longer appears as a generic reward button after ordinary snowmen.
+
 ### DONE v18.13 — daily reward integrity
-- Add date-aware daily state to Android (`reward_day`, `rewarded_builds_today`).
-- First 3 completed builds of the local calendar date can award coins; later builds remain fully playable and scoreable but show `Вільна робота • нагорода завтра`.
-- Daily state resets only when local date changes; never by elapsed 24h timer.
-- Surface `НАГОРОДИ 0/3` in the finish/result area, not as permanent HUD clutter while sculpting.
+- Date-aware Android state: `reward_day`, `rewarded_builds_today`.
+- First 3 completions can award coins/progression; later builds are free/scored play.
+- Result card states either `НАГОРОДИ N/3` or `ВІЛЬНА РОБОТА • НАГОРОДИ 3/3`.
 
 ### DONE v18.13 — mission anti-reroll
-- Seed/select one daily mission from local date + year and persist it for that date.
-- Replays on the same day keep the same mission; tomorrow changes it.
-- Mission bonus should also be paid once per rewarded build, not generate an additional unlimited reward path.
+- One deterministic mission for local calendar day + year.
+- Replays on the same date keep the same mission.
 
+## Next implementation priorities
 ### P1 — expressive completion
-- Change mandatory accessories from 6/6 to a minimum of 3 meaningful parts; allow optional decoration for score/style.
-- Keep eyes/nose/accessibility guidance available but avoid forcing identical snowmen.
-- Result scoring should acknowledge shape, stability and character separately.
+- Replace forced 6/6 completion with a minimum meaningful set: target 3 required parts, remaining parts optional.
+- Optional decoration should improve style/character score rather than block completion.
+- Keep placement hints for eyes/nose but allow intentionally odd snowmen.
+- Rebalance speed mission after the mandatory interaction count is reduced.
 
 ### P1 — phone UI
-- During sculpting show only: current step, short tactile hint, and one contextual action.
-- Move wallet/year metadata to a compact secondary strip or finish screen.
-- Ensure bottom controls remain above gesture navigation and can be reached one-handed.
+- During sculpting show only current step, short tactile hint, and contextual action.
+- Move wallet/year metadata to a secondary strip or result screen.
+- Keep all bottom controls above gesture navigation and comfortably reachable one-handed.
 
-### P2 — daily variety
-- Daily snow condition: пухкий / мокрий / крижаний, each changing rolling/placement tolerance slightly.
-- One optional daily client card tied to a play style (stable / funny / photo-friendly), with no brand dependency.
-- Keep free mode available after paid quota.
+### P2 — daily snow condition
+- Add one date-stable condition: `ПУХКИЙ`, `МОКРИЙ`, or `КРИЖАНИЙ`.
+- Condition changes actual feel slightly: rolling effort / placement tolerance, never making a run impossible.
+- Show the condition before play and with a small icon/word during sculpting; do not add another large HUD panel.
+
+### P2 — daily curiosity card
+- One optional visitor/client per day asks for a style: stable / funny / photo-friendly / regional-pattern.
+- Do not lock core progression behind the client card.
+- Reward should primarily be a memory/cosmetic entry; avoid creating another farmable currency path.
 
 ## Safe pseudo-collaboration ideas (do not present as real partnerships)
 ### Nova Poshta × ETNODIM inspiration
-Nova Poshta and ETNODIM launched the cultural project “Взори України” in August 2026 around regional Ukrainian ornament traditions. Safe adaptation: **“Візерунки областей”** — each day one region offers a scarf/hat ornament palette for the snowman; collectible as an in-game memory, clearly labelled `НАТХНЕННО УКРАЇНСЬКИМИ ВІЗЕРУНКАМИ`, with no logos or claim of partnership.
+August 2026 cultural project “Взори України” used regional Ukrainian ornament traditions. Safe adaptation: **“Візерунки областей”** — one region-inspired scarf/hat palette on selected days, collectible as an in-game memory, labelled as inspiration and using no logos.
 
 ### Uklon inspiration
-Uklon continues campaigns based on rides/challenges/reward loops in 2026. Safe adaptation: **“Зимовий маршрут”** — after finishing a snowman, choose one of three short neighborhood routes (двір / парк / школа) to deliver a photo or gift. Reward comes from completing the route choice/story, not from real-world travel or branded services.
+Challenge/route/reward patterns can become **“Зимовий маршрут”** — after a snowman, choose a short fictional destination such as двір / парк / школа for a tiny story continuation. No real-world travel requirement.
+
+### Aurora RORI inspiration — added 2026-09-02
+Aurora introduced RORI on 31 August 2026 as a curious explorer character used across stores/app communication. Safe game adaptation: **“Зимовий дослідник”** — a non-branded recurring character who occasionally brings one strange snowman part, material or tiny challenge. The useful mechanic is curiosity/discovery, not the mascot appearance, name, logo or prizes.
 
 ## Avoid
-- Fake logos or wording that implies an official partnership.
+- Fake logos or wording implying an official partnership.
 - Real-money/lottery-like mechanics tied to business brands.
 - Punitive login streaks or loss of progress for missing days.
-- More than 3 monetized/progression completions per day until the loop is tested for farming.
+- More than 3 monetized/progression completions per day until economy testing says otherwise.
+- Reintroducing random mission rerolls or elapsed-24h daily timers.
 
 ## Definition of next working state
-A build is considered the next stable gameplay milestone when: daily reward reset is date-correct; replay cannot farm coins indefinitely; the same daily mission persists through replays; free sculpting still works after 3 rewarded builds; and the phone finish screen clearly explains whether the run was rewarded or free.
-
+The v18.13 reward-loop milestone is achieved. The next working milestone should be considered ready when:
+1. a player may finish a valid snowman with 3 meaningful required parts;
+2. optional parts improve character/style rather than gate completion;
+3. a date-stable snow condition visibly and mechanically changes the run;
+4. the main phone play screen remains uncluttered and one-handed;
+5. daily reward/free-mode rules from v18.13 remain intact.
 
 ## Cycle update — 2026-09-02 late evening
-- Implemented local-date reward quota in Android: 3 rewarded/progression snowmen per day, then unlimited free sculpting.
-- Implemented stable daily mission keyed from local date + year; replay cannot reroll it.
-- Finish card now explicitly says either `НАГОРОДИ N/3` or `ВІЛЬНА РОБОТА • НАГОРОДИ 3/3`.
-- Next P1: expressive completion (minimum meaningful parts rather than forced 6/6) and daily snow condition.
-- Collaboration research direction: use current Ukrainian retail/logistics themes only as inspiration, never imply official partnership.
+- Closed unlimited Android coin/progression farming with a local-date 3/day quota.
+- Closed same-day mission rerolling.
+- Preserved unlimited free sculpting after quota.
+- Kept the pre-school ice-cream story exactly before school and nowhere in the school loop.
+- Corrected stale plan entries that still described old random missions and Gradle source mutation.
+- Next P1 is expressive completion; next P2 is daily snow feel + curiosity visitor.
