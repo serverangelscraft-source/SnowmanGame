@@ -156,8 +156,8 @@ public class JourneyActivity extends Activity {
         }
 
         void drawArrival(Canvas c,float t){
-            if(!yearAdvanced){yearAdvanced=true;year=nextYear;prefs.edit().putInt("life_year",year).apply();int best=prefs.getInt("station_best",9999);if(stationSeconds()<best)prefs.edit().putInt("station_best",stationSeconds()).apply();}
-            float w=getWidth(),bottom=getHeight()-safeBottom,a=smooth(t/.8f);drawHeader(c,"Прибуття","Вокзальний міні-рівень завершено");RectF card=new RectF(dp(20),safeTop+dp(145),w-dp(20),bottom-dp(92));p.setColor(Color.argb((int)(242*a),255,255,255));c.drawRoundRect(card,dp(27),dp(27),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(31));text.setColor(Color.rgb(36,110,153));c.drawText("РІК "+year,w/2,card.top+dp(62),text);text.setTextSize(tx(17));text.setColor(Color.rgb(43,76,96));c.drawText(ageName(year),w/2,card.top+dp(96),text);text.setTextSize(tx(9));text.setColor(Color.rgb(92,130,148));c.drawText("Нова ціль: "+yearGoal(year)+" очок",w/2,card.top+dp(130),text);c.drawText("Вокзал: "+timeText(stationSeconds())+" • помилки: "+mistakes,w/2,card.top+dp(154),text);c.drawText("Сніг у новому році потребує більше руху й точності.",w/2,card.top+dp(180),text);if(mistakes==0){text.setTextSize(tx(10));text.setColor(Color.rgb(55,133,104));c.drawText("БЕЗ ПОМИЛОК • ЧИСТА ПОДОРОЖ",w/2,card.top+dp(215),text);}actionBtn.set(dp(22),bottom-dp(74),w-dp(22),bottom-dp(14));p.setColor(Color.rgb(35,106,153));c.drawRoundRect(actionBtn,dp(20),dp(20),p);text.setTextSize(tx(10.5f));text.setColor(Color.WHITE);c.drawText(year>=7?"ПОЧАТИ РІВЕНЬ ШКОЛЯРА":"ПОЧАТИ РІК "+year,actionBtn.centerX(),actionBtn.centerY()+dp(4),text);
+            int previewYear=nextYear;
+            float w=getWidth(),bottom=getHeight()-safeBottom,a=smooth(t/.8f);drawHeader(c,"Прибуття","Подорож завершена • перехід року ще не підтверджено");RectF card=new RectF(dp(20),safeTop+dp(145),w-dp(20),bottom-dp(92));p.setColor(Color.argb((int)(242*a),255,255,255));c.drawRoundRect(card,dp(27),dp(27),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(31));text.setColor(Color.rgb(36,110,153));c.drawText("РІК "+previewYear,w/2,card.top+dp(62),text);text.setTextSize(tx(17));text.setColor(Color.rgb(43,76,96));c.drawText(ageName(previewYear),w/2,card.top+dp(96),text);text.setTextSize(tx(9));text.setColor(Color.rgb(92,130,148));c.drawText("Нова ціль: "+yearGoal(previewYear)+" очок",w/2,card.top+dp(130),text);c.drawText("Вокзал: "+timeText(stationSeconds())+" • помилки: "+mistakes,w/2,card.top+dp(154),text);c.drawText("Рік зміниться тільки після твого підтвердження.",w/2,card.top+dp(180),text);if(mistakes==0){text.setTextSize(tx(10));text.setColor(Color.rgb(55,133,104));c.drawText("БЕЗ ПОМИЛОК • ЧИСТА ПОДОРОЖ",w/2,card.top+dp(215),text);}actionBtn.set(dp(22),bottom-dp(74),w-dp(22),bottom-dp(14));p.setColor(Color.rgb(35,106,153));c.drawRoundRect(actionBtn,dp(20),dp(20),p);text.setTextSize(tx(10.5f));text.setColor(Color.WHITE);c.drawText("ПІДТВЕРДИТИ ПЕРЕХІД • РІК "+previewYear,actionBtn.centerX(),actionBtn.centerY()+dp(4),text);
         }
 
         void drawSchoolFinish(Canvas c){
@@ -171,6 +171,16 @@ public class JourneyActivity extends Activity {
 
         void switchStage(int s){stage=s;stageStart=SystemClock.elapsedRealtime();hint="";invalidate();}
         void startNewYear(){Intent i=new Intent(getContext(),MainActivity.class);getContext().startActivity(i);((Activity)getContext()).finish();}
+        void startSchool(){Intent i=new Intent(getContext(),SchoolActivity.class);getContext().startActivity(i);((Activity)getContext()).finish();}
+        void confirmYearAdvance(){
+            if(!yearAdvanced){
+                yearAdvanced=true;year=nextYear;
+                SharedPreferences.Editor e=prefs.edit().putInt("life_year",year);
+                int best=prefs.getInt("station_best",9999);if(stationSeconds()<best)e.putInt("station_best",stationSeconds());
+                e.apply();
+            }
+            startNewYear();
+        }
 
         void chooseTicket(float x,float y){
             if(wallet<ticketCost){if(actionBtn.contains(x,y))startNewYear();return;}
@@ -192,12 +202,12 @@ public class JourneyActivity extends Activity {
             if(e.getAction()==MotionEvent.ACTION_MOVE){if(draggingSnowman){snowX=clamp(x,dp(18),getWidth()-dp(18));invalidate();return true;}if(draggingTicket){ticketX=clamp(x,dp(55),getWidth()-dp(55));ticketY=clamp(y,safeTop+dp(150),getHeight()-safeBottom-dp(70));invalidate();return true;}return true;}
             if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){
                 performClick();
-                if(year>=7&&stage==WALK_TO_CASHIER&&actionBtn.contains(x,y)){startNewYear();return true;}
+                if(year>=7&&stage==WALK_TO_CASHIER&&actionBtn.contains(x,y)){startSchool();return true;}
                 if(stage==WALK_TO_CASHIER&&draggingSnowman){draggingSnowman=false;if(cashierZone.contains(snowX,snowY-dp(45))||snowX<cashierZone.right){switchStage(CHOOSE_TICKET);}else{mistakes++;hint="Каса ліворуч";invalidate();}return true;}
                 if(stage==CHOOSE_TICKET){chooseTicket(x,y);return true;}
                 if(stage==VALIDATE_TICKET&&draggingTicket){tryValidate();return true;}
                 if(stage==FIND_WAGON&&draggingSnowman){tryBoard();return true;}
-                if(stage==ARRIVAL&&actionBtn.contains(x,y)){startNewYear();return true;}
+                if(stage==ARRIVAL&&actionBtn.contains(x,y)){confirmYearAdvance();return true;}
                 return true;
             }
             return true;

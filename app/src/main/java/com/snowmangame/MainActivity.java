@@ -155,7 +155,7 @@ public class MainActivity extends Activity {
             compact=usable<dp(650);
             narrow=w<dp(360);
             float m=narrow?dp(9):dp(13);
-            float hudH=compact?dp(70):dp(78);
+            float hudH=compact?dp(60):dp(66);
             float tipH=compact?dp(44):dp(48);
             float interactionH=balls<3?(compact?dp(112):dp(132)):(compact?dp(136):dp(158));
             hud.set(m,safeTop+dp(8),w-m,safeTop+dp(8)+hudH);
@@ -235,18 +235,14 @@ public class MainActivity extends Activity {
 
         void drawHud(Canvas c){
             p.setColor(Color.argb(245,255,255,255));c.drawRoundRect(hud,dp(21),dp(21),p);
-            text.setTextAlign(Paint.Align.LEFT);text.setColor(Color.rgb(38,69,89));text.setTextSize(tx(narrow?8:9));
+            text.setTextAlign(Paint.Align.LEFT);text.setColor(Color.rgb(83,116,134));text.setTextSize(tx(narrow?6.8f:7.6f));
             c.drawText("РІК "+year+" • "+ageName(),hud.left+dp(14),hud.top+dp(18),text);
-            text.setTextSize(tx(narrow?13:15));
-            c.drawText(balls<3?"КУЛЯ "+(balls+1)+"/3":"ДЕКОР "+decorPlaced+"/6",hud.left+dp(14),hud.top+dp(42),text);
-            text.setTextSize(tx(7.2f));text.setColor(Color.rgb(97,132,150));
-            c.drawText("ЦІЛЬ "+yearGoal()+" • ЗУСИЛЛЯ ×"+String.format("%.1f",effort()),hud.left+dp(14),hud.bottom-dp(9),text);
-            text.setTextAlign(Paint.Align.RIGHT);text.setTextSize(tx(12));text.setColor(Color.rgb(34,104,146));
-            c.drawText("★ "+score,hud.right-dp(14),hud.top+dp(23),text);
-            text.setTextSize(tx(8.7f));text.setColor(Color.rgb(80,128,151));
-            c.drawText("● "+wallet+" монет",hud.right-dp(14),hud.top+dp(43),text);
-            text.setTextSize(tx(7.2f));text.setColor(Color.rgb(108,139,154));
-            c.drawText(timeText(elapsed())+" • рек "+bestScore,hud.right-dp(14),hud.bottom-dp(9),text);
+            text.setTextSize(tx(narrow?14:16));text.setColor(Color.rgb(38,69,89));
+            c.drawText(balls<3?"КУЛЯ "+(balls+1)+"/3":"ДЕКОР "+decorPlaced+"/6",hud.left+dp(14),hud.bottom-dp(13),text);
+            text.setTextAlign(Paint.Align.RIGHT);text.setTextSize(tx(narrow?10:11));text.setColor(Color.rgb(34,104,146));
+            c.drawText("● "+wallet,hud.right-dp(14),hud.top+dp(25),text);
+            text.setTextSize(tx(6.6f));text.setColor(Color.rgb(108,139,154));
+            c.drawText("монети",hud.right-dp(14),hud.bottom-dp(11),text);
         }
 
         void drawTip(Canvas c){
@@ -425,7 +421,7 @@ public class MainActivity extends Activity {
                 performClick();
                 if(finished){
                     if(sponsorBtn.contains(x,y)&&!sponsorRewarded){sponsorScene=true;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;}
-                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,DeliveryActivity.class));((Activity)ctx).finish();return true;}
+                    if(journeyBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,year>=7?SchoolActivity.class:DeliveryActivity.class));((Activity)ctx).finish();return true;}
                     if(replayBtn.contains(x,y)){reset();return true;}
                     return true;
                 }
