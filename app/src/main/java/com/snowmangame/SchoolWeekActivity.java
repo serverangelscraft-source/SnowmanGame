@@ -173,7 +173,27 @@ public class SchoolWeekActivity extends Activity {
         void drawWeekendMini(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ВИХІДНИЙ • "+weekendChoice.toUpperCase(),r.top+dp(29),7,Color.rgb(109,132,140));centerText(c,"Ще трохи — і день буде прожито",r.top+dp(66),16,Color.rgb(43,105,139));centerText(c,"Влуч у рухому мітку 4 рази.",r.top+dp(95),7.4f,Color.rgb(99,125,136));movingTarget(r);drawTarget(c,miniHits>=4);centerText(c,"Прогрес "+Math.min(4,miniHits)+"/4",r.bottom-dp(108),7.2f,Color.rgb(89,122,137));drawHero(c,r.centerX()-dp(42),r.bottom-dp(38),dp(33));drawFriend(c,r.centerX()+dp(48),r.bottom-dp(38),dp(28));if(miniHits>=4)button(c,"ЗАВЕРШИТИ ВИХІДНИЙ");else{action.setEmpty();postInvalidateOnAnimation();}}
 
         void drawBonus(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"СЬОГОДНІ • "+dayName(),r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"Цей тип дня вже зараховано",r.top+dp(72),18,Color.rgb(43,105,139));String need=schoolDone<5?("Ще потрібно навчальних днів: "+(5-schoolDone)):("Ще потрібно вихідних: "+(2-weekendDone));centerText(c,need,r.top+dp(109),8,Color.rgb(99,125,136));centerText(c,"Можна зайти до спогадів або гардероба. Рік не прокручується сам.",r.top+dp(137),7,Color.rgb(99,125,136));drawHero(c,r.centerX()-dp(38),r.bottom-dp(44),dp(35));drawFriend(c,r.centerX()+dp(50),r.bottom-dp(44),dp(28));drawBottomTools(c);}
-        void drawDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,className()+" • ПРОЖИТО "+totalDone()+"/7",r.top+dp(29),7,Color.rgb(109,132,140));centerText(c,"СЬОГОДНІШНІЙ ДЕНЬ ПРОЖИТО",r.top+dp(72),20,Color.rgb(42,106,141));String detail=isWeekday()?("Навчання "+schoolDone+"/5 • остання вечеря: "+prefs.getString("school_meal_last","—")):("Вихідні "+weekendDone+"/2 • "+prefs.getString("school_weekend_last","день прожито"));centerText(c,detail,r.top+dp(106),7.5f,Color.rgb(95,121,133));RectF lock=new RectF(r.left+dp(25),r.top+dp(137),r.right-dp(25),r.top+dp(215));p.setColor(Color.rgb(235,245,249));c.drawRoundRect(lock,dp(19),dp(19),p);centerTextAt(c,"НАСТУПНИЙ ДЕНЬ МОЖНА ПРОЖИТИ НЕ РАНІШЕ ЗАВТРА",lock.centerX(),lock.top+dp(30),6.7f,Color.rgb(105,129,139));centerTextAt(c,"Пропустиш завтра — прогрес залишиться "+totalDone()+"/7",lock.centerX(),lock.bottom-dp(20),7.8f,Color.rgb(50,104,134));drawHero(c,r.centerX()-dp(36),r.bottom-dp(40),dp(35));drawFriend(c,r.centerX()+dp(48),r.bottom-dp(40),dp(28));drawBottomTools(c);}
+        void drawDone(Canvas c){
+            RectF r=card();cardBase(c,r);
+            centerText(c,className()+" • ПРОЖИТО "+totalDone()+"/7",r.top+dp(27),7,Color.rgb(109,132,140));
+            centerText(c,"ДЕНЬ ПРОЖИТО",r.top+dp(66),18,Color.rgb(42,106,141));
+            String detail=isWeekday()?("Навчання "+schoolDone+"/5 • вечеря: "+prefs.getString("school_meal_last","—")):("Вихідні "+weekendDone+"/2 • "+prefs.getString("school_weekend_last","день прожито"));
+            centerText(c,detail,r.top+dp(96),7.3f,Color.rgb(95,121,133));
+
+            RectF lock=new RectF(r.left+dp(24),r.top+dp(118),r.right-dp(24),r.top+dp(184));
+            p.setColor(Color.rgb(235,245,249));c.drawRoundRect(lock,dp(19),dp(19),p);
+            centerTextAt(c,"НАСТУПНИЙ ДЕНЬ — НЕ РАНІШЕ ЗАВТРА",lock.centerX(),lock.top+dp(25),6.9f,Color.rgb(105,129,139));
+            centerTextAt(c,"Пропустиш день — прогрес залишиться "+totalDone()+"/7",lock.centerX(),lock.bottom-dp(17),7.4f,Color.rgb(50,104,134));
+
+            centerText(c,"А зараз можна просто побути разом або зайти до спогадів.",lock.bottom+dp(31),7.1f,Color.rgb(99,125,136));
+            float freeH=Math.max(dp(140),r.bottom-lock.bottom-dp(45));
+            float heroR=Math.max(dp(40),Math.min(dp(60),freeH/3.85f));
+            float friendR=heroR*.76f;
+            float ground=r.bottom-dp(26);
+            drawHero(c,r.centerX()-heroR*.68f,ground,heroR);
+            drawFriend(c,r.centerX()+heroR*.96f,ground,friendR);
+            drawBottomTools(c);
+        }
         void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
         void drawBottomTools(Canvas c){float w=getWidth(),bottom=getHeight()-safeBottom,gap=dp(8),half=(w-dp(48)-gap)/2f;memoryBtn.set(dp(20),bottom-dp(70),dp(20)+half,bottom-dp(13));wardrobeBtn.set(memoryBtn.right+gap,bottom-dp(70),w-dp(20),bottom-dp(13));p.setColor(Color.rgb(232,243,237));c.drawRoundRect(memoryBtn,dp(18),dp(18),p);p.setColor(Color.rgb(235,243,248));c.drawRoundRect(wardrobeBtn,dp(18),dp(18),p);centerTextAt(c,"СПОГАДИ",memoryBtn.centerX(),memoryBtn.centerY()+dp(3),7.5f,Color.rgb(58,106,91));centerTextAt(c,"ГАРДЕРОБ",wardrobeBtn.centerX(),wardrobeBtn.centerY()+dp(3),7.5f,Color.rgb(60,103,127));}
 
