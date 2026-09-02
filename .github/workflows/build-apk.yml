@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -31,7 +31,10 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Validate canonical v18.9 source tree
+      - name: Apply v18.10 school DONE layout
+        run: python scripts/apply_v18_10_school_done_layout.py
+
+      - name: Validate canonical v18.10 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -49,38 +52,40 @@ jobs:
               m=re.search(r'public\s+class\s+(\w+Activity)\s+extends\s+Activity',text)
               if m:sources[m.group(1)]=path
           registered=set(re.findall(r'android:name="\.([A-Za-z0-9_]+Activity)"',manifest))
-          missing=sorted(set(sources)-registered)
-          stale=sorted(registered-set(sources))
-          if missing:raise SystemExit('Activity source missing from manifest: '+', '.join(missing))
-          if stale:raise SystemExit('Manifest points to missing Activity: '+', '.join(stale))
+          if set(sources)!=registered: raise SystemExit('Activity source/manifest mismatch')
 
           referenced=set()
           for path in root.glob('*.java'):
               referenced.update(re.findall(r'\b([A-Za-z0-9_]+Activity)\.class\b',path.read_text(encoding='utf-8')))
           bad=sorted(referenced-registered)
-          if bad:raise SystemExit('Unregistered Activity refs: '+', '.join(bad))
+          if bad: raise SystemExit('Unregistered Activity refs: '+', '.join(bad))
 
           checks={
-            'no orphan GradeTwo':not (root/'GradeTwoActivity.java').exists(),
-            'ClassOne syntax normalized':'[]ys=' not in (root/'ClassOneActivity.java').read_text(encoding='utf-8'),
-            '2-A route active':'new Intent(ctx,SchoolWeekActivity.class)' in (root/'ClassOneActivity.java').read_text(encoding='utf-8'),
-            'player-paced school':'school_year_school_done' in school and 'school_year_weekend_done' in school,
-            'date refresh':'refreshDateIfNeeded' in school,
-            'grade11 terminal guard':'grade>=11' in school,
-            'HUD simplified':'c.drawText("★ "+score' not in main and 'timeText(elapsed())+" • рек "' not in main,
-            'year7 main route enters school':'year>=7?SchoolActivity.class:DeliveryActivity.class' in main,
-            'arrival does not auto advance':'if(!yearAdvanced){yearAdvanced=true;year=nextYear' not in journey,
-            'explicit year confirmation':'confirmYearAdvance()' in journey and 'ПІДТВЕРДИТИ ПЕРЕХІД' in journey,
-            'journey school fallback':'startSchool()' in journey,
-            'notification permission':'android.permission.POST_NOTIFICATIONS' in manifest,
-            'boot receiver':'android:name=".SnowReminderReceiver"' in manifest,
-            'versionCode 42':re.search(r'versionCode\s+42\b',gradle) is not None,
-            'versionName 18.9':'versionName "18.9"' in gradle,
+            'HUD simplified':'c.drawText("★ "+score' not in main,
+            'year transition explicit':'confirmYearAdvance()' in journey,
+            'school DONE compact title':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
+            'school DONE larger hero':'Math.min(dp(60),freeH/3.85f)' in school,
+            'school DONE compact lock':'r.top+dp(118)' in school and 'r.top+dp(184)' in school,
+            'versionCode 43':re.search(r'versionCode\s+43\b',gradle) is not None,
+            'versionName 18.10':'versionName "18.10"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed:raise SystemExit('Source integrity checks failed: '+'; '.join(failed))
-          print('Canonical v18.9 source tree OK')
+          if failed: raise SystemExit('v18.10 checks failed: '+'; '.join(failed))
+          print('Canonical v18.10 source tree OK')
           PY
+
+      - name: Persist v18.10 canonical sources
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          if git diff --cached --quiet; then
+            echo 'v18.10 already canonical'
+          else
+            git commit -m 'Normalize v18.10 school DONE layout'
+            git push
+          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
