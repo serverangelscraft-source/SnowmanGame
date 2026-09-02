@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -31,176 +31,63 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Normalize ClassOne source and 2-A route
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('app/src/main/java/com/snowmangame/ClassOneActivity.java')
-          s = p.read_text(encoding='utf-8')
-
-          bad = 'float[] xs={w*.27f,w*.52f,w*.76f},[]ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
-          good = 'float[] xs={w*.27f,w*.52f,w*.76f}, ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
-          if bad in s:
-              s = s.replace(bad, good, 1)
-          elif good not in s:
-              raise SystemExit('ClassOne compile pattern changed; review source')
-
-          route_old = '            else if(stage==GRADE2){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}}'
-          route_new = '            else if(stage==GRADE2){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}if(action.contains(x,y)){ctx.startActivity(new Intent(ctx,SchoolWeekActivity.class));return true;}}'
-          if 'new Intent(ctx,SchoolWeekActivity.class)' not in s:
-              if route_old not in s:
-                  raise SystemExit('ClassOne 2-A route pattern changed; review source')
-              s = s.replace(route_old, route_new, 1)
-
-          visual_old = 'action.set(dp(22),bottom-dp(66),w-dp(22),bottom-dp(11));p.setColor(Color.rgb(213,229,237));c.drawRoundRect(action,dp(20),dp(20),p);text.setTextSize(tx(8));text.setColor(Color.rgb(96,123,136));c.drawText("2-А • НАСТУПНИЙ РОЗДІЛ",action.centerX(),action.centerY()+dp(3),text);'
-          visual_new = 'action.set(dp(22),bottom-dp(66),w-dp(22),bottom-dp(11));p.setColor(Color.rgb(37,108,153));c.drawRoundRect(action,dp(20),dp(20),p);text.setTextSize(tx(8));text.setColor(Color.WHITE);c.drawText("2-А • НАСТУПНИЙ РОЗДІЛ",action.centerX(),action.centerY()+dp(3),text);'
-          if visual_new not in s:
-              if visual_old not in s:
-                  raise SystemExit('ClassOne 2-A button style pattern changed; review source')
-              s = s.replace(visual_old, visual_new, 1)
-
-          p.write_text(s, encoding='utf-8')
-          print('Normalized ClassOneActivity syntax and activated 2-A transition')
-          PY
-
-      - name: Normalize current school-life sources
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import subprocess
-
-          school_path = Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java')
-          school = school_path.read_text(encoding='utf-8')
-
-          if 'school_playerpaced_v18_4' not in school:
-              subprocess.check_call(['python', 'scripts/apply_playerpaced_school_v18_4.py'])
-          else:
-              print('Player-paced school source already normalized')
-
-          school = school_path.read_text(encoding='utf-8')
-          if 'NotificationScheduler.onSchoolOpened(this);' not in school:
-              subprocess.check_call(['python', 'scripts/apply_notifications_v18_5.py'])
-          else:
-              print('v18.6 school notification integration already normalized')
-
-          call_path = Path('app/src/main/java/com/snowmangame/SchoolCallActivity.java')
-          if not call_path.exists():
-              raise SystemExit('SchoolCallActivity missing after v18.6 normalization')
-          call = call_path.read_text(encoding='utf-8')
-          bad = 'performClick();finish();return true;'
-          good = 'performClick();((Activity)ctx).finish();return true;'
-          if bad in call:
-              subprocess.check_call(['python', 'scripts/apply_school_call_fix_v18_6.py'])
-          elif good in call:
-              print('SchoolCallActivity finish target already normalized')
-          else:
-              raise SystemExit('SchoolCallActivity finish pattern changed; review source')
-          PY
-
-      - name: Harden school progression edge states
+      - name: Validate canonical source tree
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          school_path = Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java')
-          gradle_path = Path('app/build.gradle')
-          s = school_path.read_text(encoding='utf-8')
+          root = Path('app/src/main/java/com/snowmangame')
+          manifest = Path('app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
+          gradle = Path('app/build.gradle').read_text(encoding='utf-8')
 
-          def replace_once(old, new, label):
-              global s
-              if new in s:
-                  return
-              if old not in s:
-                  raise SystemExit('v18.8 patch failed: ' + label)
-              s = s.replace(old, new, 1)
+          sources = {}
+          for path in root.glob('*Activity.java'):
+              text = path.read_text(encoding='utf-8')
+              m = re.search(r'public\s+class\s+(\w+Activity)\s+extends\s+Activity', text)
+              if m:
+                  sources[m.group(1)] = path
 
-          replace_once(
-              'public class SchoolWeekActivity extends Activity {\n    @Override public void onCreate(Bundle b){',
-              'public class SchoolWeekActivity extends Activity {\n    private SchoolWeekView schoolView;\n\n    @Override public void onCreate(Bundle b){',
-              'SchoolWeekActivity field')
+          registered = set(re.findall(r'android:name="\.([A-Za-z0-9_]+Activity)"', manifest))
+          missing = sorted(set(sources) - registered)
+          stale = sorted(registered - set(sources))
+          if missing:
+              raise SystemExit('Activity source missing from manifest: ' + ', '.join(missing))
+          if stale:
+              raise SystemExit('Manifest points to missing Activity source: ' + ', '.join(stale))
 
-          replace_once(
-              '        setContentView(new SchoolWeekView(this));\n        NotificationScheduler.onSchoolOpened(this);\n    }',
-              '        schoolView=new SchoolWeekView(this);\n        setContentView(schoolView);\n        NotificationScheduler.onSchoolOpened(this);\n    }\n\n    @Override protected void onResume(){\n        super.onResume();\n        if(schoolView!=null)schoolView.refreshDateIfNeeded();\n    }',
-              'date refresh lifecycle')
+          referenced = set()
+          for path in root.glob('*.java'):
+              text = path.read_text(encoding='utf-8')
+              referenced.update(re.findall(r'\b([A-Za-z0-9_]+Activity)\.class\b', text))
+          bad_refs = sorted(referenced - registered)
+          if bad_refs:
+              raise SystemExit('Intent/Activity reference not registered in manifest: ' + ', '.join(bad_refs))
 
-          replace_once(
-              '            calendarDow=dayOfWeek(effectiveDay);',
-              '            calendarDow=dayOfWeek(today);',
-              'calendar weekday source')
+          checks = {
+              'orphan GradeTwo source removed': not (root / 'GradeTwoActivity.java').exists(),
+              'no GradeTwo references remain': all('GradeTwoActivity' not in p.read_text(encoding='utf-8') for p in root.glob('*.java')),
+              'ClassOne syntax normalized': '[]ys=' not in (root / 'ClassOneActivity.java').read_text(encoding='utf-8'),
+              '2-A route is active': 'new Intent(ctx,SchoolWeekActivity.class)' in (root / 'ClassOneActivity.java').read_text(encoding='utf-8'),
+              'player-paced prefs present': 'school_year_school_done' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8') and 'school_year_weekend_done' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8'),
+              'school open scheduler connected': 'NotificationScheduler.onSchoolOpened(this);' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8'),
+              'day completion scheduler connected': 'NotificationScheduler.onDayCompleted(ctx);' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8'),
+              'date refresh present': 'refreshDateIfNeeded' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8'),
+              'grade 11 terminal guard present': 'grade>=11' in (root / 'SchoolWeekActivity.java').read_text(encoding='utf-8'),
+              'notification permission declared': 'android.permission.POST_NOTIFICATIONS' in manifest,
+              'boot permission declared': 'android.permission.RECEIVE_BOOT_COMPLETED' in manifest,
+              'reminder receiver declared': 'android:name=".SnowReminderReceiver"' in manifest,
+              'version code 41': re.search(r'versionCode\s+41\b', gradle) is not None,
+              'version name 18.8': 'versionName "18.8"' in gradle,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit('Source integrity checks failed: ' + '; '.join(failed))
 
-          old = '            }\n\n            schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));'
-          new = '            }\n\n            if(prefs.getBoolean("school_year_complete",false) && !prefs.contains("school_year_complete_day")){\n                prefs.edit().putLong("school_year_complete_day",effectiveDay).apply();\n            }\n\n            schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));'
-          replace_once(old, new, 'legacy completed-year date')
-
-          replace_once(
-              '            if(yearComplete&&completeDay==effectiveDay)stage=YEAR_DONE;',
-              '            if(yearComplete&&(completeDay==effectiveDay||grade>=11))stage=YEAR_DONE;',
-              'grade 11 terminal state')
-
-          replace_once(
-              '        int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}',
-              '        void refreshDateIfNeeded(){\n            long now=localDayNumber();\n            if(now==today)return;\n            initState();\n            invalidate();\n        }\n\n        int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}',
-              'date refresh method')
-
-          replace_once(
-              'centerText(c,"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));',
-              'centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));',
-              'grade 11 completion copy')
-
-          school_path.write_text(s, encoding='utf-8')
-
-          g = gradle_path.read_text(encoding='utf-8')
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 41', g)
-          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "18.8"', g)
-          gradle_path.write_text(g, encoding='utf-8')
-          print('Applied SnowmanGame v18.8 school and grade-transition fixes')
+          print('Canonical source tree OK')
+          print('Registered Activities:', ', '.join(sorted(registered)))
+          print('Referenced Activities:', ', '.join(sorted(referenced)))
           PY
-
-      - name: Validate school-life integration
-        run: |
-          test -f app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          test -f app/src/main/java/com/snowmangame/SchoolCallActivity.java
-          test -f app/src/main/java/com/snowmangame/SnowSwimActivity.java
-          test -f app/src/main/java/com/snowmangame/NotificationScheduler.java
-          test -f app/src/main/java/com/snowmangame/SnowReminderReceiver.java
-          grep -q 'android.permission.POST_NOTIFICATIONS' app/src/main/AndroidManifest.xml
-          grep -q 'android.permission.RECEIVE_BOOT_COMPLETED' app/src/main/AndroidManifest.xml
-          grep -q 'android:name=".SchoolWeekActivity"' app/src/main/AndroidManifest.xml
-          grep -q 'android:name=".SchoolCallActivity"' app/src/main/AndroidManifest.xml
-          grep -q 'android:name=".SnowSwimActivity"' app/src/main/AndroidManifest.xml
-          grep -q 'android:name=".SnowReminderReceiver"' app/src/main/AndroidManifest.xml
-          grep -q 'school_year_school_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'school_year_weekend_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'NotificationScheduler.onSchoolOpened(this);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'NotificationScheduler.onDayCompleted(ctx);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'calendarDow=dayOfWeek(today);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'refreshDateIfNeeded' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'grade>=11' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'new Intent(ctx,SchoolWeekActivity.class)' app/src/main/java/com/snowmangame/ClassOneActivity.java
-          grep -q 'versionCode 41' app/build.gradle
-          grep -q 'versionName "18.8"' app/build.gradle
-          ! grep -q '\[\]ys=' app/src/main/java/com/snowmangame/ClassOneActivity.java
-
-      - name: Persist normalized sources to main
-        if: github.event_name == 'push'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            app/build.gradle \
-            app/src/main/AndroidManifest.xml \
-            app/src/main/java/com/snowmangame/ClassOneActivity.java \
-            app/src/main/java/com/snowmangame/SchoolWeekActivity.java \
-            app/src/main/java/com/snowmangame/SchoolCallActivity.java \
-            app/src/main/java/com/snowmangame/SnowSwimActivity.java
-          if git diff --cached --quiet; then
-            echo 'Sources already normalized; nothing to persist.'
-          else
-            git commit -m 'Normalize generated v18.8 gameplay sources'
-            git push origin HEAD:main
-          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
