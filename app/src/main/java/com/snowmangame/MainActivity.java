@@ -379,7 +379,10 @@ public class MainActivity extends Activity {
                 if(e.getAction()==MotionEvent.ACTION_UP){
                     performClick();
                     float t=(SystemClock.elapsedRealtime()-sponsorStart)/1000f;
-                    if(t>4.8f&&sponsorCloseBtn.contains(x,y)){sponsorScene=false;invalidate();}
+                    if(t>4.8f&&sponsorCloseBtn.contains(x,y)){
+                        if(year>=7){prefs.edit().putBoolean("pre_school_icecream_done",true).apply();ctx.startActivity(new Intent(ctx,SchoolActivity.class));((Activity)ctx).finish();return true;}
+                        sponsorScene=false;invalidate();
+                    }
                 }
                 return true;
             }
@@ -421,7 +424,12 @@ public class MainActivity extends Activity {
             if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){
                 performClick();
                 if(finished){
-                    if(journeyBtn.contains(x,y)&&(year>=7||yearBuilds>=3)){ctx.startActivity(new Intent(ctx,year>=7?SchoolActivity.class:DeliveryActivity.class));((Activity)ctx).finish();return true;}
+                    if(journeyBtn.contains(x,y)&&(year>=7||yearBuilds>=3)){
+                        if(year>=7&&!prefs.getBoolean("pre_school_icecream_done",false)){
+                            sponsorScene=true;sponsorRewarded=false;sponsorStart=SystemClock.elapsedRealtime();buzz(20);invalidate();return true;
+                        }
+                        ctx.startActivity(new Intent(ctx,year>=7?SchoolActivity.class:DeliveryActivity.class));((Activity)ctx).finish();return true;
+                    }
                     if(replayBtn.contains(x,y)){reset();return true;}
                     return true;
                 }
@@ -520,7 +528,7 @@ public class MainActivity extends Activity {
             LinearGradient sky=new LinearGradient(0,0,0,bottom*.75f,Color.rgb(168,224,249),Color.rgb(232,248,255),Shader.TileMode.CLAMP);
             p.setShader(sky);c.drawRect(0,0,w,getHeight(),p);p.setShader(null);
             RectF poster=new RectF(dp(16),safeTop+dp(15),w-dp(16),safeTop+dp(132));p.setColor(Color.argb(242,255,255,255));c.drawRoundRect(poster,dp(24),dp(24),p);
-            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(112,140,154));c.drawText("ДЕМО-ІНТЕГРАЦІЯ",poster.left+dp(16),poster.top+dp(19),text);
+            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(112,140,154));c.drawText(year>=7?"ПЕРЕД ШКОЛОЮ • ДЕМО-ІНТЕГРАЦІЯ":"ДЕМО-ІНТЕГРАЦІЯ",poster.left+dp(16),poster.top+dp(19),text);
             text.setTextSize(tx(25));text.setColor(Color.rgb(214,72,111));c.drawText("ЕСКІМОС",poster.left+dp(16),poster.top+dp(55),text);
             text.setTextSize(tx(9));text.setColor(Color.rgb(62,101,122));c.drawText("Холодне до холодного.",poster.left+dp(16),poster.top+dp(82),text);
             float cx=w*.46f,br=Math.min(w*.18f,dp(70)),mr=br*.72f,hr=br*.54f,by=bottom-dp(120)-br,my=by-(br+mr)*.84f,hy=my-(mr+hr)*.84f;
@@ -534,7 +542,7 @@ public class MainActivity extends Activity {
             if(t>3.7f){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(15));text.setColor(Color.rgb(42,93,121));c.drawText("Холодне до холодного! +150",w/2,safeTop+dp(168),text);}
             if(t>4.8f){
                 float bw=Math.min(w-dp(38),dp(338)),bh=dp(54),l=(w-bw)/2,top=bottom-dp(70);sponsorCloseBtn.set(l,top,l+bw,top+bh);
-                p.setColor(Color.rgb(38,105,145));c.drawRoundRect(sponsorCloseBtn,dp(18),dp(18),p);text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText("ПОВЕРНУТИСЯ ДО РЕЗУЛЬТАТУ",sponsorCloseBtn.centerX(),sponsorCloseBtn.centerY()+dp(4),text);
+                p.setColor(Color.rgb(38,105,145));c.drawRoundRect(sponsorCloseBtn,dp(18),dp(18),p);text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText(year>=7?"ДО ШКОЛИ":"ПОВЕРНУТИСЯ ДО РЕЗУЛЬТАТУ",sponsorCloseBtn.centerX(),sponsorCloseBtn.centerY()+dp(4),text);
             }
         }
         void drawIceCream(Canvas c,float x,float y,float scale){
