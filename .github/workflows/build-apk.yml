@@ -31,21 +31,36 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Normalize ClassOne source
+      - name: Normalize ClassOne source and 2-A route
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('app/src/main/java/com/snowmangame/ClassOneActivity.java')
           s = p.read_text(encoding='utf-8')
+
           bad = 'float[] xs={w*.27f,w*.52f,w*.76f},[]ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
           good = 'float[] xs={w*.27f,w*.52f,w*.76f}, ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
           if bad in s:
-              p.write_text(s.replace(bad, good, 1), encoding='utf-8')
-              print('Normalized ClassOneActivity syntax')
-          elif good in s:
-              print('ClassOneActivity already normalized')
-          else:
+              s = s.replace(bad, good, 1)
+          elif good not in s:
               raise SystemExit('ClassOne compile pattern changed; review source')
+
+          route_old = '            else if(stage==GRADE2){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}}'
+          route_new = '            else if(stage==GRADE2){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}if(action.contains(x,y)){ctx.startActivity(new Intent(ctx,SchoolWeekActivity.class));return true;}}'
+          if 'new Intent(ctx,SchoolWeekActivity.class)' not in s:
+              if route_old not in s:
+                  raise SystemExit('ClassOne 2-A route pattern changed; review source')
+              s = s.replace(route_old, route_new, 1)
+
+          visual_old = 'action.set(dp(22),bottom-dp(66),w-dp(22),bottom-dp(11));p.setColor(Color.rgb(213,229,237));c.drawRoundRect(action,dp(20),dp(20),p);text.setTextSize(tx(8));text.setColor(Color.rgb(96,123,136));c.drawText("2-А • НАСТУПНИЙ РОЗДІЛ",action.centerX(),action.centerY()+dp(3),text);'
+          visual_new = 'action.set(dp(22),bottom-dp(66),w-dp(22),bottom-dp(11));p.setColor(Color.rgb(37,108,153));c.drawRoundRect(action,dp(20),dp(20),p);text.setTextSize(tx(8));text.setColor(Color.WHITE);c.drawText("2-А • НАСТУПНИЙ РОЗДІЛ",action.centerX(),action.centerY()+dp(3),text);'
+          if visual_new not in s:
+              if visual_old not in s:
+                  raise SystemExit('ClassOne 2-A button style pattern changed; review source')
+              s = s.replace(visual_old, visual_new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          print('Normalized ClassOneActivity syntax and activated 2-A transition')
           PY
 
       - name: Normalize current school-life sources
@@ -97,7 +112,7 @@ jobs:
               if new in s:
                   return
               if old not in s:
-                  raise SystemExit('v18.7 patch failed: ' + label)
+                  raise SystemExit('v18.8 patch failed: ' + label)
               s = s.replace(old, new, 1)
 
           replace_once(
@@ -137,10 +152,10 @@ jobs:
           school_path.write_text(s, encoding='utf-8')
 
           g = gradle_path.read_text(encoding='utf-8')
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 40', g)
-          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "18.7"', g)
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 41', g)
+          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "18.8"', g)
           gradle_path.write_text(g, encoding='utf-8')
-          print('Applied SnowmanGame v18.7 school integrity fixes')
+          print('Applied SnowmanGame v18.8 school and grade-transition fixes')
           PY
 
       - name: Validate school-life integration
@@ -163,8 +178,9 @@ jobs:
           grep -q 'calendarDow=dayOfWeek(today);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
           grep -q 'refreshDateIfNeeded' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
           grep -q 'grade>=11' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
-          grep -q 'versionCode 40' app/build.gradle
-          grep -q 'versionName "18.7"' app/build.gradle
+          grep -q 'new Intent(ctx,SchoolWeekActivity.class)' app/src/main/java/com/snowmangame/ClassOneActivity.java
+          grep -q 'versionCode 41' app/build.gradle
+          grep -q 'versionName "18.8"' app/build.gradle
           ! grep -q '\[\]ys=' app/src/main/java/com/snowmangame/ClassOneActivity.java
 
       - name: Persist normalized sources to main
@@ -182,7 +198,7 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Sources already normalized; nothing to persist.'
           else
-            git commit -m 'Normalize generated v18.7 gameplay sources'
+            git commit -m 'Normalize generated v18.8 gameplay sources'
             git push origin HEAD:main
           fi
 
