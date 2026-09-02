@@ -28,7 +28,7 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Apply compile hotfix
+      - name: Apply ClassOne compile fix
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -41,6 +41,12 @@ jobs:
           elif good not in s:
               raise SystemExit('ClassOne compile pattern changed; review source')
           PY
+
+      - name: Apply current school-life patch chain
+        run: |
+          python scripts/apply_playerpaced_school_v18_4.py
+          python scripts/apply_notifications_v18_5.py
+          python scripts/apply_school_call_fix_v18_6.py
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
