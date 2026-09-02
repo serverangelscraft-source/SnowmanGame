@@ -455,15 +455,21 @@ public class MainActivity extends Activity {
 
         void tryPlaceAccessory(int type,float x,float y){
             Accessory a=items[type];float tol=tolerance(type),d=dist(x,y,a.targetX,a.targetY);
-            if(d<=tol){
-                float acc=clamp(1-d/Math.max(1,tol),0,1);int q=Math.max(50,Math.min(100,Math.round(58+acc*42)));
-                a.placed=true;a.x=x;a.y=y;a.quality=q;decorPlaced++;decorQuality+=q;score+=70+q;
+            float loose=tol*1.65f;
+            if(d<=loose){
+                float acc=clamp(1-d/Math.max(1,tol),0,1);
+                int q=Math.max(25,Math.min(100,Math.round(35+acc*65)));
+                a.placed=true;a.x=x;a.y=y;a.quality=q;decorPlaced++;decorQuality+=q;score+=45+q;
                 if(q>=90){combo++;score+=combo*20;}else combo=0;
-                buzz(24);
+                buzz(q>=70?24:14);
                 if(type==NOSE)showGift(NOSE);
                 if(type==ARMS)showGift(ARMS);
-                tip=decorPlaced<ACCESSORY_COUNT?a.name+": "+q+"%. Наступна деталь":"Декор готовий — заверши сніговика";
-            }else{combo=0;tip="Занадто далеко — постав точніше";buzz(12);}
+                if(decorPlaced>=ACCESSORY_COUNT)tip="Декор готовий — заверши сніговика";
+                else if(d<=tol)tip=a.name+": "+q+"%. Наступна деталь";
+                else tip=a.name+" кривенько — зате з характером";
+            }else{
+                combo=0;tip="Це вже повз сніговика — спробуй ближче";buzz(12);
+            }
             invalidate();
         }
 
@@ -488,7 +494,7 @@ public class MainActivity extends Activity {
             float l=(w-cw)/2,top=safeTop+(bottom-safeTop-ch)/2;
             RectF card=new RectF(l,top,l+cw,top+ch);
             p.setColor(Color.WHITE);c.drawRoundRect(card,dp(28),dp(28),p);
-            text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(17));text.setColor(Color.rgb(30,69,93));c.drawText("Рік "+year+" завершено",card.centerX(),card.top+dp(36),text);
+            text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(17));text.setColor(Color.rgb(30,69,93));c.drawText("Сніговика завершено • рік "+year,card.centerX(),card.top+dp(36),text);
             text.setTextSize(tx(34));text.setColor(Color.rgb(39,117,159));c.drawText(String.valueOf(score),card.centerX(),card.top+dp(82),text);
             text.setTextSize(tx(8));text.setColor(Color.rgb(103,137,155));c.drawText("ЦІЛЬ "+yearGoal()+" • "+(score>=yearGoal()?"ВИКОНАНО":"ЩЕ Є КУДИ РОСТИ"),card.centerX(),card.top+dp(105),text);
             c.drawText("КУЛІ "+avgBuild()+"% • ДЕКОР "+avgDecor()+"% • "+timeText(finishSeconds),card.centerX(),card.top+dp(127),text);
