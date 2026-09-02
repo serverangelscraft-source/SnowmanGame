@@ -28,6 +28,20 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
+      - name: Apply compile hotfix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/snowmangame/ClassOneActivity.java')
+          s = p.read_text(encoding='utf-8')
+          bad = 'float[] xs={w*.27f,w*.52f,w*.76f},[]ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
+          good = 'float[] xs={w*.27f,w*.52f,w*.76f}, ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
+          if bad in s:
+              p.write_text(s.replace(bad, good), encoding='utf-8')
+          elif good not in s:
+              raise SystemExit('ClassOne compile pattern changed; review source')
+          PY
+
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
 
