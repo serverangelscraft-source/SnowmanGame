@@ -48,6 +48,22 @@ jobs:
           python scripts/apply_notifications_v18_5.py
           python scripts/apply_school_call_fix_v18_6.py
 
+      - name: Validate school-life integration
+        run: |
+          test -f app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          test -f app/src/main/java/com/snowmangame/SchoolCallActivity.java
+          test -f app/src/main/java/com/snowmangame/SnowSwimActivity.java
+          test -f app/src/main/java/com/snowmangame/NotificationScheduler.java
+          test -f app/src/main/java/com/snowmangame/SnowReminderReceiver.java
+          grep -q 'android.permission.POST_NOTIFICATIONS' app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.RECEIVE_BOOT_COMPLETED' app/src/main/AndroidManifest.xml
+          grep -q 'android:name=".SchoolWeekActivity"' app/src/main/AndroidManifest.xml
+          grep -q 'android:name=".SchoolCallActivity"' app/src/main/AndroidManifest.xml
+          grep -q 'android:name=".SnowSwimActivity"' app/src/main/AndroidManifest.xml
+          grep -q 'android:name=".SnowReminderReceiver"' app/src/main/AndroidManifest.xml
+          grep -q 'school_year_school_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'school_year_weekend_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
 
