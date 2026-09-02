@@ -16,6 +16,9 @@ import android.view.Window;
 import android.view.WindowInsets;
 
 import java.util.Random;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b) {
@@ -44,7 +47,8 @@ public class MainActivity extends Activity {
         float density, textScale, safeTop, safeBottom;
         boolean compact, narrow, finished, rolling, ballReady, draggingBall, sponsorScene, sponsorRewarded, coinsAwarded;
         int balls, score, bestScore, buildQuality, decorQuality, decorPlaced, combo;
-        int year, wallet, runCoins, mission, yearBuilds;
+        int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday;
+        long rewardDay;
         long startTime, sponsorStart;
         int finishSeconds;
         boolean missionSuccess;
@@ -72,12 +76,13 @@ public class MainActivity extends Activity {
             year=Math.max(1,Math.min(7,prefs.getInt("life_year",1)));
             wallet=Math.max(0,prefs.getInt("coins",0));
             yearBuilds=Math.max(0,Math.min(3,prefs.getInt("year_builds_"+year,0)));
+            syncDailyState();
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeCap(Paint.Cap.ROUND);
             String[] names={"Очі","Морква","Ґудзики","Шарф","Шапка","Руки"};
             for(int i=0;i<ACCESSORY_COUNT;i++) items[i]=new Accessory(i,names[i]);
-            mission=yearBuilds<3?yearBuilds:rnd.nextInt(3);
+            mission=dailyMission();
             setClickable(true);
             setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener(){
                 @Override public WindowInsets onApplyWindowInsets(View v,WindowInsets insets){
@@ -120,6 +125,27 @@ public class MainActivity extends Activity {
             if(mission==0)return "МІСІЯ: точність куль ≥ "+acc+"%";
             if(mission==1)return "МІСІЯ: завершити ≤ "+sec+" с";
             return "МІСІЯ: декор ≥ "+acc+"%";
+        }
+        long localDayNumber(){
+            Calendar local=Calendar.getInstance();
+            int y=local.get(Calendar.YEAR),m=local.get(Calendar.MONTH),d=local.get(Calendar.DAY_OF_MONTH);
+            GregorianCalendar utc=new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+            utc.clear();utc.set(y,m,d,0,0,0);
+            return utc.getTimeInMillis()/86400000L;
+        }
+        void syncDailyState(){
+            long now=localDayNumber();
+            long saved=prefs.getLong("reward_day",Long.MIN_VALUE);
+            if(saved!=now){
+                rewardDay=now;rewardedBuildsToday=0;
+                prefs.edit().putLong("reward_day",now).putInt("rewarded_builds_today",0).apply();
+            }else{
+                rewardDay=saved;rewardedBuildsToday=Math.max(0,Math.min(3,prefs.getInt("rewarded_builds_today",0)));
+            }
+        }
+        int dailyMission(){
+            long seed=rewardDay*31L+year*17L;
+            return (int)Math.floorMod(seed,3L);
         }
         String timeText(int s){return String.format("%d:%02d",s/60,s%60);}
         void buzz(int ms){
@@ -485,7 +511,12 @@ public class MainActivity extends Activity {
             if(missionSuccess)score+=250;
             finished=true;
             if(!coinsAwarded){
-                runCoins=Math.max(1,score/300);wallet+=runCoins;coinsAwarded=true;yearBuilds=Math.min(3,yearBuilds+1);prefs.edit().putInt("coins",wallet).putInt("year_builds_"+year,yearBuilds).apply();
+                syncDailyState();
+                coinsAwarded=true;
+                if(rewardedBuildsToday<3){
+                    runCoins=Math.max(1,score/300);wallet+=runCoins;rewardedBuildsToday++;yearBuilds=Math.min(3,yearBuilds+1);
+                    prefs.edit().putInt("coins",wallet).putLong("reward_day",rewardDay).putInt("rewarded_builds_today",rewardedBuildsToday).putInt("year_builds_"+year,yearBuilds).apply();
+                }else runCoins=0;
             }
             if(score>bestScore){bestScore=score;prefs.edit().putInt("best_score",bestScore).apply();}
             buzz(65);invalidate();
@@ -503,7 +534,9 @@ public class MainActivity extends Activity {
             text.setTextSize(tx(8));text.setColor(Color.rgb(103,137,155));c.drawText("ЦІЛЬ "+yearGoal()+" • "+(score>=yearGoal()?"ВИКОНАНО":"ЩЕ Є КУДИ РОСТИ"),card.centerX(),card.top+dp(105),text);
             c.drawText("КУЛІ "+avgBuild()+"% • ДЕКОР "+avgDecor()+"% • "+timeText(finishSeconds),card.centerX(),card.top+dp(127),text);
             RectF coin=new RectF(card.left+dp(24),card.top+dp(145),card.right-dp(24),card.top+dp(194));
-            p.setColor(Color.rgb(235,247,239));c.drawRoundRect(coin,dp(17),dp(17),p);text.setTextSize(tx(9));text.setColor(Color.rgb(55,126,99));c.drawText("+"+runCoins+" МОНЕТ • БАЛАНС "+wallet,coin.centerX(),coin.centerY()+dp(3),text);
+            p.setColor(runCoins>0?Color.rgb(235,247,239):Color.rgb(239,245,248));c.drawRoundRect(coin,dp(17),dp(17),p);text.setTextSize(tx(8.5f));text.setColor(runCoins>0?Color.rgb(55,126,99):Color.rgb(79,119,140));
+            String rewardText=runCoins>0?("+"+runCoins+" МОНЕТ • НАГОРОДИ "+rewardedBuildsToday+"/3"):("ВІЛЬНА РОБОТА • НАГОРОДИ 3/3 • БАЛАНС "+wallet);
+            c.drawText(rewardText,coin.centerX(),coin.centerY()+dp(3),text);
             RectF badge=new RectF(card.left+dp(24),card.top+dp(205),card.right-dp(24),card.top+dp(248));
             p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(246,239,232));c.drawRoundRect(badge,dp(15),dp(15),p);text.setTextSize(tx(8));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО +250":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()+dp(3),text);
 
@@ -551,7 +584,7 @@ public class MainActivity extends Activity {
 
         void reset(){
             balls=0;score=0;buildQuality=0;decorQuality=0;decorPlaced=0;combo=0;finished=false;rolling=false;ballReady=false;draggingBall=false;draggingAccessory=-1;
-            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;mission=yearBuilds<3?yearBuilds:rnd.nextInt(3);giftType=-1;
+            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();mission=dailyMission();giftType=-1;
             tip="Коти сніг пальцем — зроби першу кулю";rollX=Float.NaN;rollY=Float.NaN;
             for(Accessory a:items){a.placed=false;a.quality=0;a.x=a.y=0;}
             buzz(18);invalidate();
