@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -31,7 +31,10 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Validate canonical v18.10 source tree
+      - name: Apply v18.11 pacing cleanup
+        run: python scripts/apply_v18_11_pacing_cleanup.py
+
+      - name: Validate canonical v18.11 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -58,18 +61,34 @@ jobs:
           if bad: raise SystemExit('Unregistered Activity refs: '+', '.join(bad))
 
           checks={
-            'HUD simplified':'c.drawText("★ "+score' not in main,
+            '3-build year pacing':'year_builds_' in main and 'yearBuilds>=3' in main,
+            'distinct first three missions':'mission=yearBuilds<3?yearBuilds:rnd.nextInt(3);' in main,
+            'ice cream CTA removed':'СПРОБУВАТИ ЕСКІМОС' not in main and 'ЕСКІМОС УЖЕ СКУШТОВАНО' not in main,
+            'journey gated':'journeyBtn.contains(x,y)&&(year>=7||yearBuilds>=3)' in main,
             'year transition explicit':'confirmYearAdvance()' in journey,
-            'school DONE compact title':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
-            'school DONE larger hero':'Math.min(dp(60),freeH/3.85f)' in school,
-            'school DONE compact lock':'r.top+dp(118)' in school and 'r.top+dp(184)' in school,
-            'versionCode 43':re.search(r'versionCode\s+43\b',gradle) is not None,
-            'versionName 18.10':'versionName "18.10"' in gradle,
+            'school DONE compact':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
+            'dinner UI materialized':'dishRect.set(r.centerX()-dp(138),r.top+dp(145),r.centerX()+dp(138),r.top+dp(330))' in school,
+            'Gradle source mutation removed':'patchDinnerUi' not in gradle and 'dinnerSource' not in gradle,
+            'versionCode 44':re.search(r'versionCode\s+44\b',gradle) is not None,
+            'versionName 18.11':'versionName "18.11"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.10 checks failed: '+'; '.join(failed))
-          print('Canonical v18.10 source tree OK')
+          if failed: raise SystemExit('v18.11 checks failed: '+'; '.join(failed))
+          print('Canonical v18.11 source tree OK')
           PY
+
+      - name: Persist v18.11 canonical sources
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          if git diff --cached --quiet; then
+            echo 'v18.11 sources already canonical'
+          else
+            git commit -m 'Normalize v18.11 pacing and core flow'
+            git push
+          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
