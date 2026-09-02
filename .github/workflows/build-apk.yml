@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +31,7 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Apply ClassOne compile fix
+      - name: Normalize ClassOne source
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -37,16 +40,47 @@ jobs:
           bad = 'float[] xs={w*.27f,w*.52f,w*.76f},[]ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
           good = 'float[] xs={w*.27f,w*.52f,w*.76f}, ys={safeTop+dp(320),safeTop+dp(385),safeTop+dp(312)};'
           if bad in s:
-              p.write_text(s.replace(bad, good), encoding='utf-8')
-          elif good not in s:
+              p.write_text(s.replace(bad, good, 1), encoding='utf-8')
+              print('Normalized ClassOneActivity syntax')
+          elif good in s:
+              print('ClassOneActivity already normalized')
+          else:
               raise SystemExit('ClassOne compile pattern changed; review source')
           PY
 
-      - name: Apply current school-life patch chain
+      - name: Normalize current school-life sources
         run: |
-          python scripts/apply_playerpaced_school_v18_4.py
-          python scripts/apply_notifications_v18_5.py
-          python scripts/apply_school_call_fix_v18_6.py
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          school_path = Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java')
+          school = school_path.read_text(encoding='utf-8')
+
+          if 'school_playerpaced_v18_4' not in school:
+              subprocess.check_call(['python', 'scripts/apply_playerpaced_school_v18_4.py'])
+          else:
+              print('Player-paced school source already normalized')
+
+          school = school_path.read_text(encoding='utf-8')
+          if 'NotificationScheduler.onSchoolOpened(this);' not in school:
+              subprocess.check_call(['python', 'scripts/apply_notifications_v18_5.py'])
+          else:
+              print('v18.6 school notification integration already normalized')
+
+          call_path = Path('app/src/main/java/com/snowmangame/SchoolCallActivity.java')
+          if not call_path.exists():
+              raise SystemExit('SchoolCallActivity missing after v18.6 normalization')
+          call = call_path.read_text(encoding='utf-8')
+          bad = 'performClick();finish();return true;'
+          good = 'performClick();((Activity)ctx).finish();return true;'
+          if bad in call:
+              subprocess.check_call(['python', 'scripts/apply_school_call_fix_v18_6.py'])
+          elif good in call:
+              print('SchoolCallActivity finish target already normalized')
+          else:
+              raise SystemExit('SchoolCallActivity finish pattern changed; review source')
+          PY
 
       - name: Validate school-life integration
         run: |
@@ -63,6 +97,30 @@ jobs:
           grep -q 'android:name=".SnowReminderReceiver"' app/src/main/AndroidManifest.xml
           grep -q 'school_year_school_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
           grep -q 'school_year_weekend_done' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'NotificationScheduler.onSchoolOpened(this);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'NotificationScheduler.onDayCompleted(ctx);' app/src/main/java/com/snowmangame/SchoolWeekActivity.java
+          grep -q 'versionCode 39' app/build.gradle
+          grep -q 'versionName "18.6"' app/build.gradle
+          ! grep -q '\[\]ys=' app/src/main/java/com/snowmangame/ClassOneActivity.java
+
+      - name: Persist normalized sources to main
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            app/build.gradle \
+            app/src/main/AndroidManifest.xml \
+            app/src/main/java/com/snowmangame/ClassOneActivity.java \
+            app/src/main/java/com/snowmangame/SchoolWeekActivity.java \
+            app/src/main/java/com/snowmangame/SchoolCallActivity.java \
+            app/src/main/java/com/snowmangame/SnowSwimActivity.java
+          if git diff --cached --quiet; then
+            echo 'Sources already normalized; nothing to persist.'
+          else
+            git commit -m 'Normalize generated v18.6 gameplay sources'
+            git push origin HEAD:main
+          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
