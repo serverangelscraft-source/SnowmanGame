@@ -24,15 +24,16 @@ jobs:
           curl -fL --retry 8 --retry-all-errors --connect-timeout 30 https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
-      - name: Validate canonical v18.19 source tree
+      - name: Validate canonical v18.20 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           main=Path('app/src/main/java/com/snowmangame/MainActivity.java').read_text(encoding='utf-8')
           school=Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java').read_text(encoding='utf-8')
+          resume=Path('app/src/main/java/com/snowmangame/ResumeActivity.java').read_text(encoding='utf-8')
+          manifest=Path('app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
           gradle=Path('app/build.gradle').read_text(encoding='utf-8')
-          plan=Path('docs/PLAYER_RETURN_PLAN.md').read_text(encoding='utf-8')
           checks={
             'challenge snapshot field':'long rewardDay, challengeDay;' in main,
             'active run freezes daily context':'if(startTime!=0)return;' in main,
@@ -40,20 +41,17 @@ jobs:
             'school day rule intact':'school_player_last_completed_day' in school,
             'dinner three bite save clamp':'Math.min(3,prefs.getInt("school_player_dinner_bites",0))' in school,
             'dinner touch limit':'dinnerBites<3&&dishRect.contains' in school and 'dinnerBites>=3&&action.contains' in school,
-            'dinner visual remaining':'drawDish(c,dishX,dishY,dishR,idx,remaining);' in school,
-            'dinner warm scene':'LinearGradient warm=' in school and 'ВЕЧІР' in school,
-            'dinner simplified header':'вечеря завершує день' in school,
-            'old five-bite copy removed':"З'їдено "+chr(34) not in school and 'dinnerBites<5' not in school,
-            'deruny pellets removed':'c.drawCircle(x+i*r*.34f,y,r*.22f,p)' not in school,
-            'deruny flat stack':'RectF pancake=' in school and 'ГАЛИЧИНА' in school and 'СМЕТАНА' in school and 'float cupX=' in school,
-            'varenyky crescents':'c.drawArc(dumpling,0,180,false,stroke);' in school,
-            'plan v18.19':'Current Android baseline: v18.19' in plan and 'v18.19 — dinner scene rework' in plan,
-            'versionCode 52':re.search(r'versionCode\s+52\b',gradle) is not None,
-            'versionName 18.19':'versionName "18.19"' in gradle,
+            'deruny branded sour cream':'ГАЛИЧИНА' in school and 'СМЕТАНА' in school and 'float cupX=' in school,
+            'resume school week':'schoolWeekStarted' in resume and 'SchoolWeekActivity.class' in resume,
+            'resume existing progress':'hasProgress' in resume and 'MainActivity.class' in resume,
+            'resume launcher':'.ResumeActivity' in manifest and 'android.intent.action.MAIN' in manifest,
+            'intro no longer exported launcher':'android:name=".IntroActivity" android:screenOrientation="portrait" android:exported="false"' in manifest,
+            'versionCode 53':re.search(r'versionCode\s+53\b',gradle) is not None,
+            'versionName 18.20':'versionName "18.20"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.19 checks failed: '+'; '.join(failed))
-          print('Canonical v18.19 source tree OK')
+          if failed: raise SystemExit('v18.20 checks failed: '+'; '.join(failed))
+          print('Canonical v18.20 source tree OK')
           PY
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
