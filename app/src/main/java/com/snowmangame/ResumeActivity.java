@@ -10,6 +10,7 @@ public class ResumeActivity extends Activity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         SharedPreferences p=getSharedPreferences("snowman_game", Context.MODE_PRIVATE);
+        SchoolProgressionGuard.repair(p);
 
         Intent next;
         boolean schoolWeekStarted=p.getBoolean("class2_started",false)
