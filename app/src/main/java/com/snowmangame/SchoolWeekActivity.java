@@ -120,7 +120,12 @@ public class SchoolWeekActivity extends Activity {
             else if(stageDay==effectiveDay)stage=prefs.getInt("school_player_stage",defaultStage());
             else{stage=defaultStage();resetMiniForDate();}
 
-            bagMask=prefs.getInt("school_player_bag_mask",0);miniHits=prefs.getInt("school_player_mini_hits",0);homeStep=prefs.getInt("school_player_home_step",0);dinnerBites=prefs.getInt("school_player_dinner_bites",0);weekendChoice=prefs.getString("school_player_weekend_choice","");mistakes=Math.max(0,prefs.getInt("school_mistakes",0));
+            bagMask=prefs.getInt("school_player_bag_mask",0);
+            miniHits=prefs.getInt("school_player_mini_hits",0);
+            homeStep=prefs.getInt("school_player_home_step",0);
+            dinnerBites=Math.max(0,Math.min(3,prefs.getInt("school_player_dinner_bites",0)));
+            weekendChoice=prefs.getString("school_player_weekend_choice","");
+            mistakes=Math.max(0,prefs.getInt("school_mistakes",0));
             prefs.edit().putLong("school_player_last_seen_day",lastSeen).putLong("school_player_stage_day",effectiveDay).putInt("school_player_stage",stage).putInt("school_grade",grade).putInt("school_winter",winter).putBoolean("class2_started",true).apply();
         }
 
@@ -145,8 +150,25 @@ public class SchoolWeekActivity extends Activity {
         @Override protected void onDraw(Canvas c){super.onDraw(c);drawBackground(c);drawHeader(c);if(stage==INTRO){drawIntro(c);return;}if(stage==YEAR_DONE){drawYearDone(c);return;}if(stage==DONE){drawDone(c);return;}if(stage==BONUS){drawBonus(c);return;}if(stage==WEEKEND){drawWeekendChoice(c);return;}if(stage==WEEKEND_MINI){drawWeekendMini(c);return;}if(stage==MORNING){drawMorning(c);return;}if(stage==LESSON1){drawLesson(c,false);return;}if(stage==BREAK){drawBreak(c);return;}if(stage==LESSON2){drawLesson(c,true);return;}if(stage==HOME){drawHome(c);return;}drawDinner(c);}
 
         void drawBackground(Canvas c){float w=getWidth(),h=getHeight(),bottom=h-safeBottom;if(isWeekday()){LinearGradient g=new LinearGradient(0,0,0,bottom,Color.rgb(242,236,216),Color.rgb(229,224,203),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);p.setColor(Color.rgb(193,158,114));c.drawRect(0,bottom-dp(78),w,h,p);}else{LinearGradient g=new LinearGradient(0,0,0,bottom,Color.rgb(164,220,246),Color.rgb(238,249,253),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);p.setColor(Color.rgb(246,251,253));c.drawRect(0,bottom*.67f,w,h,p);}}
-        void drawHeader(Canvas c){float w=getWidth(),top=safeTop+dp(10);RectF r=new RectF(dp(14),top,w-dp(14),top+dp(124));p.setColor(Color.argb(247,255,255,255));c.drawRoundRect(r,dp(24),dp(24),p);text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(7));text.setColor(Color.rgb(101,128,142));c.drawText("ШКОЛА • ЗИМА "+winter+" • "+className(),r.left+dp(17),r.top+dp(20),text);text.setTextSize(tx(17));text.setColor(Color.rgb(38,73,94));String title=(stage==BONUS?"Бонусний день":("День "+Math.max(1,currentNumber())+"/7"))+" • "+dayName();c.drawText(title,r.left+dp(17),r.top+dp(51),text);text.setTextSize(tx(7.2f));text.setColor(Color.rgb(91,123,139));c.drawText("Прогрес року: навчання "+schoolDone+"/5 • вихідні "+weekendDone+"/2",r.left+dp(17),r.top+dp(78),text);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(119,139,147));c.drawText("Пропущений день не рахується • за одну дату максимум 1 день життя",r.left+dp(17),r.top+dp(101),text);}
-        RectF card(){float bottom=getHeight()-safeBottom;return new RectF(dp(20),safeTop+dp(155),getWidth()-dp(20),bottom-dp(88));}
+        void drawHeader(Canvas c){
+            float w=getWidth(),top=safeTop+dp(10),headerH=stage==DINNER?dp(92):dp(124);
+            RectF r=new RectF(dp(14),top,w-dp(14),top+headerH);
+            p.setColor(Color.argb(247,255,255,255));c.drawRoundRect(r,dp(24),dp(24),p);
+            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(7));text.setColor(Color.rgb(101,128,142));
+            c.drawText("ШКОЛА • ЗИМА "+winter+" • "+className(),r.left+dp(17),r.top+dp(20),text);
+            text.setTextSize(tx(stage==DINNER?15:17));text.setColor(Color.rgb(38,73,94));
+            String title=stage==DINNER?("День "+Math.max(1,currentNumber())+"/7 • ВЕЧІР"):(stage==BONUS?"Бонусний день":("День "+Math.max(1,currentNumber())+"/7 • "+dayName()));
+            c.drawText(title,r.left+dp(17),r.top+dp(51),text);
+            text.setTextSize(tx(7.2f));text.setColor(Color.rgb(91,123,139));
+            if(stage==DINNER){
+                c.drawText("Навчання "+schoolDone+"/5 • вечеря завершує день",r.left+dp(17),r.top+dp(75),text);
+            }else{
+                c.drawText("Прогрес року: навчання "+schoolDone+"/5 • вихідні "+weekendDone+"/2",r.left+dp(17),r.top+dp(78),text);
+                text.setTextSize(tx(6.5f));text.setColor(Color.rgb(119,139,147));
+                c.drawText("Пропущений день не рахується • за одну дату максимум 1 день життя",r.left+dp(17),r.top+dp(101),text);
+            }
+        }
+        RectF card(){float bottom=getHeight()-safeBottom;float top=stage==DINNER?safeTop+dp(112):safeTop+dp(155);return new RectF(dp(20),top,getWidth()-dp(20),bottom-dp(88));}
         void cardBase(Canvas c,RectF r){p.setColor(Color.argb(246,255,255,255));c.drawRoundRect(r,dp(27),dp(27),p);}
         void centerText(Canvas c,String s,float y,float size,int color){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(size));text.setColor(color);while(text.measureText(s)>getWidth()-dp(70)&&text.getTextSize()>tx(5.2f))text.setTextSize(text.getTextSize()-dp(.25f));c.drawText(s,getWidth()/2f,y,text);}
         void centerTextAt(Canvas c,String s,float x,float y,float size,int color){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(size));text.setColor(color);c.drawText(s,x,y,text);}
@@ -167,7 +189,43 @@ public class SchoolWeekActivity extends Activity {
 
         void drawHome(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ЕТАП 5/6 • ДОРОГА ДОДОМУ",r.top+dp(28),7,Color.rgb(111,132,139));centerText(c,"Пройди слідами від школи додому",r.top+dp(67),15,Color.rgb(48,82,99));centerText(c,"Натискай сліди по черзі.",r.top+dp(95),7.2f,Color.rgb(102,127,138));float yy=r.centerY()-dp(10),left=r.left+dp(55),right=r.right-dp(55);stroke.setStrokeWidth(dp(3));stroke.setColor(Color.rgb(205,221,228));c.drawLine(left,yy,right,yy,stroke);for(int i=0;i<4;i++){float xx=left+(right-left)*i/3f;pathRects[i].set(xx-dp(25),yy-dp(25),xx+dp(25),yy+dp(25));p.setColor(i<homeStep?Color.rgb(214,239,226):(i==homeStep?Color.rgb(252,214,87):Color.rgb(235,243,247)));c.drawCircle(xx,yy,dp(22),p);centerTextAt(c,""+(i+1),xx,yy+dp(4),7,Color.rgb(65,111,137));}drawHero(c,r.left+dp(76),r.bottom-dp(40),dp(31));drawFriend(c,r.right-dp(72),r.bottom-dp(40),dp(27));if(homeStep>=4)button(c,"МИ ВДОМА");else action.setEmpty();}
 
-        void drawDinner(Canvas c){RectF r=card();cardBase(c,r);int idx=Math.max(0,Math.min(4,schoolDone));centerText(c,"ЕТАП 6/6 • ВЕЧЕРЯ "+schoolOrdinal()+"/5",r.top+dp(28),7,Color.rgb(113,134,141));centerText(c,DISHES[idx],r.top+dp(78),27,Color.rgb(48,82,99));centerText(c,"Після школи — одна домашня українська страва.",r.top+dp(116),8.5f,Color.rgb(99,124,134));dishRect.set(r.centerX()-dp(138),r.top+dp(145),r.centerX()+dp(138),r.top+dp(330));drawDish(c,r.centerX(),r.top+dp(238),dp(108),idx);for(int i=0;i<5-dinnerBites;i++){p.setColor(Color.argb(210,255,255,255));c.drawCircle(r.centerX()-dp(56)+i*dp(28),r.top+dp(239),dp(7),p);}centerText(c,"З'їдено "+Math.min(5,dinnerBites)+"/5",r.top+dp(360),9.2f,Color.rgb(89,122,137));drawHero(c,r.centerX(),r.bottom-dp(56),dp(49));if(dinnerBites>=5)button(c,"ЗАВЕРШИТИ ДЕНЬ");else{action.setEmpty();centerText(c,"Торкайся великої тарілки, щоб повечеряти.",r.bottom-dp(122),8.2f,Color.rgb(111,132,139));}}
+        void drawDinner(Canvas c){
+            RectF r=card();cardBase(c,r);
+            int idx=Math.max(0,Math.min(4,schoolDone));
+            int eaten=Math.max(0,Math.min(3,dinnerBites)),remaining=3-eaten;
+            centerText(c,"ВЕЧЕРЯ • "+schoolOrdinal()+"/5",r.top+dp(25),7,Color.rgb(113,134,141));
+            centerText(c,DISHES[idx],r.top+dp(62),Math.min(23,getWidth()/dp(15)),Color.rgb(48,82,99));
+            centerText(c,eaten>=3?"Смачно. День майже завершено.":"Три короткі укуси — і відпочивати.",r.top+dp(86),7.2f,Color.rgb(99,124,134));
+
+            float sceneBottom=r.bottom-dp(eaten>=3?82:48);
+            RectF scene=new RectF(r.left+dp(10),r.top+dp(98),r.right-dp(10),sceneBottom);
+            LinearGradient warm=new LinearGradient(0,scene.top,0,scene.bottom,Color.rgb(255,240,210),Color.rgb(224,179,128),Shader.TileMode.CLAMP);
+            p.setShader(warm);c.drawRoundRect(scene,dp(22),dp(22),p);p.setShader(null);
+            p.setColor(Color.rgb(112,157,180));
+            RectF window=new RectF(scene.left+dp(13),scene.top+dp(13),scene.left+Math.min(dp(76),scene.width()*.27f),scene.top+Math.min(dp(82),scene.height()*.34f));
+            c.drawRoundRect(window,dp(10),dp(10),p);
+            p.setColor(Color.rgb(239,247,250));c.drawRect(window.centerX()-dp(1),window.top,window.centerX()+dp(1),window.bottom,p);c.drawRect(window.left,window.centerY()-dp(1),window.right,window.centerY()+dp(1),p);
+
+            float tableY=scene.top+scene.height()*.64f;
+            float heroR=Math.max(dp(28),Math.min(dp(43),Math.min(scene.width()*.13f,scene.height()*.18f)));
+            float heroX=scene.centerX()-scene.width()*.22f;
+            drawHero(c,heroX,tableY+dp(52),heroR);
+            p.setColor(Color.rgb(151,102,68));c.drawRoundRect(new RectF(scene.left,tableY,scene.right,scene.bottom+dp(8)),dp(8),dp(8),p);
+            p.setColor(Color.rgb(190,137,91));c.drawRect(scene.left,tableY,scene.right,tableY+dp(10),p);
+
+            float dishX=scene.centerX()+scene.width()*.18f;
+            float dishR=Math.max(dp(54),Math.min(dp(83),scene.width()*.25f));
+            float dishY=tableY-dp(3);
+            dishRect.set(dishX-dishR*1.15f,dishY-dishR*.62f,dishX+dishR*1.15f,dishY+dishR*.62f);
+            drawDish(c,dishX,dishY,dishR,idx,remaining);
+
+            if(eaten<3){
+                action.setEmpty();
+                centerText(c,"Торкнись тарілки • залишилось "+remaining,r.bottom-dp(18),7.8f,Color.rgb(88,116,128));
+            }else{
+                button(c,"ЗАВЕРШИТИ ДЕНЬ");
+            }
+        }
 
         void drawWeekendChoice(Canvas c){RectF r=card();cardBase(c,r);centerText(c,(calendarDow==Calendar.SATURDAY?"СУБОТА":"НЕДІЛЯ")+" • ВИХІДНИЙ "+(weekendDone+1)+"/2",r.top+dp(30),7,Color.rgb(109,132,140));centerText(c,"СЬОГОДНІ — СНІГОПЛАВАННЯ",r.top+dp(70),18,Color.rgb(43,105,139));centerText(c,"Не вода: холодний сухий басейн зі сніговою крупою при -8 °C.",r.top+dp(104),7.2f,Color.rgb(99,125,136));centerText(c,"Малий не тане, а буквально «пливе» крізь пухкий сніг.",r.top+dp(130),7.2f,Color.rgb(99,125,136));drawHero(c,r.centerX()-dp(42),r.bottom-dp(40),dp(34));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(40),dp(28));button(c,"ВЕСТИ МАЛОГО НА ПЛАВАННЯ");}
         void drawWeekendMini(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ВИХІДНИЙ • "+weekendChoice.toUpperCase(),r.top+dp(29),7,Color.rgb(109,132,140));centerText(c,"Ще трохи — і день буде прожито",r.top+dp(66),16,Color.rgb(43,105,139));centerText(c,"Влуч у рухому мітку 4 рази.",r.top+dp(95),7.4f,Color.rgb(99,125,136));movingTarget(r);drawTarget(c,miniHits>=4);centerText(c,"Прогрес "+Math.min(4,miniHits)+"/4",r.bottom-dp(108),7.2f,Color.rgb(89,122,137));drawHero(c,r.centerX()-dp(42),r.bottom-dp(38),dp(33));drawFriend(c,r.centerX()+dp(48),r.bottom-dp(38),dp(28));if(miniHits>=4)button(c,"ЗАВЕРШИТИ ВИХІДНИЙ");else{action.setEmpty();postInvalidateOnAnimation();}}
@@ -197,32 +255,52 @@ public class SchoolWeekActivity extends Activity {
         void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
         void drawBottomTools(Canvas c){float w=getWidth(),bottom=getHeight()-safeBottom,gap=dp(8),half=(w-dp(48)-gap)/2f;memoryBtn.set(dp(20),bottom-dp(70),dp(20)+half,bottom-dp(13));wardrobeBtn.set(memoryBtn.right+gap,bottom-dp(70),w-dp(20),bottom-dp(13));p.setColor(Color.rgb(232,243,237));c.drawRoundRect(memoryBtn,dp(18),dp(18),p);p.setColor(Color.rgb(235,243,248));c.drawRoundRect(wardrobeBtn,dp(18),dp(18),p);centerTextAt(c,"СПОГАДИ",memoryBtn.centerX(),memoryBtn.centerY()+dp(3),7.5f,Color.rgb(58,106,91));centerTextAt(c,"ГАРДЕРОБ",wardrobeBtn.centerX(),wardrobeBtn.centerY()+dp(3),7.5f,Color.rgb(60,103,127));}
 
-        void drawDish(Canvas c,float x,float y,float r,int kind){
+        void drawDish(Canvas c,float x,float y,float r,int kind,int remaining){
+            remaining=Math.max(0,Math.min(3,remaining));
+            float f=remaining/3f;
             p.setColor(Color.rgb(236,240,237));
             c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);
+            stroke.setStrokeWidth(Math.max(dp(1),r*.012f));stroke.setColor(Color.argb(55,75,92,91));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),stroke);
             if(kind==0){
-                p.setColor(Color.rgb(167,57,45));c.drawOval(new RectF(x-r*.70f,y-r*.27f,x+r*.70f,y+r*.25f),p);p.setColor(Color.rgb(247,245,226));c.drawCircle(x+r*.18f,y-r*.05f,r*.12f,p);
+                if(remaining>0){
+                    float rw=r*(.30f+.40f*f),rh=r*(.10f+.15f*f);
+                    p.setColor(Color.rgb(160,48,43));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);
+                    if(remaining>=2){p.setColor(Color.rgb(247,245,226));c.drawCircle(x+rw*.18f,y-rh*.15f,Math.max(dp(4),r*.075f),p);}
+                }else{p.setColor(Color.argb(75,167,57,45));c.drawOval(new RectF(x-r*.20f,y-r*.05f,x+r*.20f,y+r*.05f),p);}
             }else if(kind==1){
-                p.setColor(Color.rgb(238,205,145));for(int i=-1;i<=1;i++)c.drawOval(new RectF(x+i*r*.38f-r*.24f,y-r*.12f,x+i*r*.38f+r*.24f,y+r*.17f),p);
+                int count=remaining*2;
+                for(int i=0;i<count;i++){
+                    int row=i/3,col=i%3;float px=x+(col-1)*r*.34f+(row==1?r*.10f:0),py=y-r*.08f+row*r*.15f;
+                    p.setColor(Color.rgb(236,199,132));RectF dumpling=new RectF(px-r*.19f,py-r*.10f,px+r*.19f,py+r*.10f);c.drawOval(dumpling,p);
+                    p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(px-r*.15f,py-r*.10f,px+r*.15f,py+r*.015f),p);
+                    stroke.setColor(Color.rgb(201,162,103));stroke.setStrokeWidth(Math.max(dp(.8f),r*.01f));c.drawArc(dumpling,0,180,false,stroke);
+                }
             }else if(kind==2){
-                p.setColor(Color.rgb(112,152,88));for(int i=-1;i<=1;i++)c.drawRoundRect(new RectF(x+i*r*.35f-r*.20f,y-r*.15f,x+i*r*.35f+r*.20f,y+r*.16f),r*.08f,r*.08f,p);
+                int count=remaining*2;
+                for(int i=0;i<count;i++){
+                    int row=i/3,col=i%3;float px=x+(col-1)*r*.32f+(row==1?r*.08f:0),py=y-r*.08f+row*r*.17f;
+                    RectF roll=new RectF(px-r*.17f,py-r*.085f,px+r*.17f,py+r*.085f);
+                    p.setColor(Color.rgb(107,150,83));c.drawRoundRect(roll,r*.06f,r*.06f,p);
+                    stroke.setColor(Color.rgb(81,122,65));stroke.setStrokeWidth(Math.max(dp(.8f),r*.012f));c.drawLine(px-r*.09f,py-r*.055f,px+r*.09f,py+r*.055f,stroke);
+                    p.setColor(Color.argb(105,220,235,190));c.drawRoundRect(new RectF(roll.left+r*.025f,roll.top+r*.018f,roll.right-r*.025f,roll.top+r*.045f),r*.02f,r*.02f,p);
+                }
             }else if(kind==3){
-                float[] ox={-.34f,.05f,.37f,-.08f};
-                float[] oy={.04f,-.08f,.05f,.15f};
-                float[] rot={-9f,7f,-5f,4f};
-                for(int i=0;i<4;i++){
-                    c.save();
-                    c.rotate(rot[i],x+ox[i]*r,y+oy[i]*r);
+                int count=remaining==3?4:(remaining==2?3:(remaining==1?1:0));
+                float[] ox={-.34f,.05f,.37f,-.08f};float[] oy={.04f,-.08f,.05f,.15f};float[] rot={-9f,7f,-5f,4f};
+                for(int i=0;i<count;i++){
+                    c.save();c.rotate(rot[i],x+ox[i]*r,y+oy[i]*r);
                     RectF pancake=new RectF(x+ox[i]*r-r*.29f,y+oy[i]*r-r*.105f,x+ox[i]*r+r*.29f,y+oy[i]*r+r*.105f);
                     p.setColor(Color.rgb(178,112,35));c.drawOval(new RectF(pancake.left-r*.018f,pancake.top-r*.012f,pancake.right+r*.018f,pancake.bottom+r*.012f),p);
                     p.setColor(Color.rgb(232,177,71));c.drawOval(pancake,p);
-                    p.setColor(Color.argb(120,255,222,133));c.drawOval(new RectF(pancake.left+r*.055f,pancake.top+r*.025f,pancake.right-r*.075f,pancake.bottom-r*.035f),p);
-                    c.restore();
+                    p.setColor(Color.argb(120,255,222,133));c.drawOval(new RectF(pancake.left+r*.055f,pancake.top+r*.025f,pancake.right-r*.075f,pancake.bottom-r*.035f),p);c.restore();
                 }
-                p.setColor(Color.rgb(249,248,240));c.drawCircle(x+r*.58f,y-r*.03f,r*.13f,p);
-                p.setColor(Color.rgb(238,241,234));c.drawCircle(x+r*.58f,y-r*.03f,r*.085f,p);
+                if(remaining>0){p.setColor(Color.rgb(249,248,240));c.drawCircle(x+r*.58f,y-r*.03f,r*.13f,p);p.setColor(Color.rgb(238,241,234));c.drawCircle(x+r*.58f,y-r*.03f,r*.085f,p);}
             }else{
-                p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-r*.68f,y-r*.25f,x+r*.68f,y+r*.24f),p);p.setColor(Color.rgb(250,245,223));for(int i=-2;i<=2;i++)c.drawCircle(x+i*r*.20f,y-r*.03f,r*.055f,p);
+                if(remaining>0){
+                    float rw=r*(.22f+.46f*f),rh=r*(.09f+.15f*f);
+                    p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);
+                    p.setColor(Color.rgb(250,245,223));int crumbs=remaining*2+1;for(int i=0;i<crumbs;i++){float px=x+(i-(crumbs-1)/2f)*rw*.30f;c.drawCircle(px,y-rh*.12f,Math.max(dp(2),r*.035f),p);}
+                }
             }
         }
         void button(Canvas c,String label){float w=getWidth(),bottom=getHeight()-safeBottom;action.set(dp(22),bottom-dp(70),w-dp(22),bottom-dp(12));p.setColor(Color.rgb(37,108,153));c.drawRoundRect(action,dp(20),dp(20),p);centerTextAt(c,label,action.centerX(),action.centerY()+dp(4),8.8f,Color.WHITE);}
@@ -236,7 +314,7 @@ public class SchoolWeekActivity extends Activity {
         void wrong(String s){mistakes++;feedback=s;prefs.edit().putInt("school_mistakes",mistakes).apply();SoundFx.play(ctx,SoundFx.WRONG);buzz(10);invalidate();}
         void finishCountedDay(){if(prefs.getLong("school_player_last_completed_day",Long.MIN_VALUE)==effectiveDay)return;if(isWeekday())schoolDone=Math.min(5,schoolDone+1);else weekendDone=Math.min(2,weekendDone+1);SharedPreferences.Editor e=prefs.edit().putInt("school_year_school_done",schoolDone).putInt("school_year_weekend_done",weekendDone).putLong("school_player_last_completed_day",effectiveDay).putLong("school_clock_last_completed_day",effectiveDay).putInt("school_clock_days_lived",prefs.getInt("school_clock_days_lived",0)+1);if(isWeekday()){String dish=DISHES[Math.max(0,schoolDone-1)];e.putInt("school_meals_total",prefs.getInt("school_meals_total",0)+1).putString("school_meal_last",dish);}else e.putString("school_weekend_last",weekendChoice);yearComplete=schoolDone>=5&&weekendDone>=2;if(yearComplete)e.putBoolean("school_year_complete",true).putLong("school_year_complete_day",effectiveDay);e.putInt("school_player_stage",yearComplete?YEAR_DONE:DONE).putLong("school_player_stage_day",effectiveDay).apply();stage=yearComplete?YEAR_DONE:DONE;SoundFx.play(ctx,SoundFx.COMPLETE);buzz(28);NotificationScheduler.onDayCompleted(ctx);invalidate();}
 
-        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;performClick();float x=e.getX(),y=e.getY();if(stage==INTRO){if(action.contains(x,y)){yearIntro=false;prefs.edit().putBoolean("school_year_intro_pending",false).putInt("school_clock_announced_grade",grade).apply();setStage(defaultStage());SoundFx.play(ctx,SoundFx.SCHOOL_BELL);}return true;}if(stage==DONE||stage==YEAR_DONE||stage==BONUS){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}return true;}if(stage==MORNING){for(int i=0;i<5;i++)if(bagRects[i].contains(x,y)){if(i<3){bagMask|=1<<i;SoundFx.play(ctx,SoundFx.CLOTH);buzz(10);}else wrong("Це краще залишити вдома.");persistMini();invalidate();return true;}if((bagMask&7)==7&&action.contains(x,y)){setStage(LESSON1);return true;}}else if(stage==LESSON1){for(int i=0;i<3;i++)if(choices[i].contains(x,y)){if(i==correct(false)){SoundFx.play(ctx,SoundFx.CORRECT);buzz(18);setStage(BREAK);}else wrong("Не ця відповідь. Спробуй ще раз.");return true;}}else if(stage==BREAK){movingTarget(card());if(target.contains(x,y)&&miniHits<3){miniHits++;persistMini();SoundFx.play(ctx,SoundFx.PLAY);buzz(10);invalidate();return true;}if(miniHits>=3&&action.contains(x,y)){miniHits=0;persistMini();setStage(LESSON2);return true;}}else if(stage==LESSON2){for(int i=0;i<3;i++)if(choices[i].contains(x,y)){if(i==correct(true)){SoundFx.play(ctx,SoundFx.CORRECT);buzz(18);setStage(HOME);}else wrong("Подумай ще раз.");return true;}}else if(stage==HOME){if(homeStep<4&&pathRects[homeStep].contains(x,y)){homeStep++;persistMini();SoundFx.play(ctx,SoundFx.CRUNCH);buzz(8);invalidate();return true;}if(homeStep>=4&&action.contains(x,y)){setStage(DINNER);return true;}}else if(stage==DINNER){if(dinnerBites<5&&dishRect.contains(x,y)){dinnerBites++;persistMini();SoundFx.play(ctx,SoundFx.ITEM);buzz(8);invalidate();return true;}if(dinnerBites>=5&&action.contains(x,y)){finishCountedDay();return true;}}else if(stage==WEEKEND){if(action.contains(x,y)){ctx.startActivity(new Intent(ctx,SnowSwimActivity.class));return true;}}else if(stage==WEEKEND_MINI){movingTarget(card());if(target.contains(x,y)&&miniHits<4){miniHits++;persistMini();SoundFx.play(ctx,SoundFx.PLAY);buzz(9);invalidate();return true;}if(miniHits>=4&&action.contains(x,y)){finishCountedDay();return true;}}return true;}
+        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;performClick();float x=e.getX(),y=e.getY();if(stage==INTRO){if(action.contains(x,y)){yearIntro=false;prefs.edit().putBoolean("school_year_intro_pending",false).putInt("school_clock_announced_grade",grade).apply();setStage(defaultStage());SoundFx.play(ctx,SoundFx.SCHOOL_BELL);}return true;}if(stage==DONE||stage==YEAR_DONE||stage==BONUS){if(memoryBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,MemoryActivity.class));return true;}if(wardrobeBtn.contains(x,y)){ctx.startActivity(new Intent(ctx,WardrobeActivity.class));return true;}return true;}if(stage==MORNING){for(int i=0;i<5;i++)if(bagRects[i].contains(x,y)){if(i<3){bagMask|=1<<i;SoundFx.play(ctx,SoundFx.CLOTH);buzz(10);}else wrong("Це краще залишити вдома.");persistMini();invalidate();return true;}if((bagMask&7)==7&&action.contains(x,y)){setStage(LESSON1);return true;}}else if(stage==LESSON1){for(int i=0;i<3;i++)if(choices[i].contains(x,y)){if(i==correct(false)){SoundFx.play(ctx,SoundFx.CORRECT);buzz(18);setStage(BREAK);}else wrong("Не ця відповідь. Спробуй ще раз.");return true;}}else if(stage==BREAK){movingTarget(card());if(target.contains(x,y)&&miniHits<3){miniHits++;persistMini();SoundFx.play(ctx,SoundFx.PLAY);buzz(10);invalidate();return true;}if(miniHits>=3&&action.contains(x,y)){miniHits=0;persistMini();setStage(LESSON2);return true;}}else if(stage==LESSON2){for(int i=0;i<3;i++)if(choices[i].contains(x,y)){if(i==correct(true)){SoundFx.play(ctx,SoundFx.CORRECT);buzz(18);setStage(HOME);}else wrong("Подумай ще раз.");return true;}}else if(stage==HOME){if(homeStep<4&&pathRects[homeStep].contains(x,y)){homeStep++;persistMini();SoundFx.play(ctx,SoundFx.CRUNCH);buzz(8);invalidate();return true;}if(homeStep>=4&&action.contains(x,y)){setStage(DINNER);return true;}}else if(stage==DINNER){if(dinnerBites<3&&dishRect.contains(x,y)){dinnerBites++;persistMini();SoundFx.play(ctx,SoundFx.ITEM);buzz(8);invalidate();return true;}if(dinnerBites>=3&&action.contains(x,y)){finishCountedDay();return true;}}else if(stage==WEEKEND){if(action.contains(x,y)){ctx.startActivity(new Intent(ctx,SnowSwimActivity.class));return true;}}else if(stage==WEEKEND_MINI){movingTarget(card());if(target.contains(x,y)&&miniHits<4){miniHits++;persistMini();SoundFx.play(ctx,SoundFx.PLAY);buzz(9);invalidate();return true;}if(miniHits>=4&&action.contains(x,y)){finishCountedDay();return true;}}return true;}
         @Override public boolean performClick(){super.performClick();return true;}
     }
 }
