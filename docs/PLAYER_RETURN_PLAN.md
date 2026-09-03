@@ -1,8 +1,8 @@
 # SnowmanGame — player return / mobile loop plan
 
 Updated: 2026-09-03
-Current Android baseline: v18.18
-Latest post-baseline UI patch: realistic deruny rendering, CI green
+Current Android baseline: v18.19
+Latest milestone: dinner changed from a static 5-tap form into a 3-bite visual evening scene
 
 ## Current playable loop
 - Build a snowman by rolling 3 balls and placing accessories.
@@ -11,6 +11,7 @@ Latest post-baseline UI patch: realistic deruny rendering, CI green
 - Daily mission, snow condition and visitor are stable for the active snowman. Midnight cannot change rules mid-run.
 - Missing a day never deletes progress and there is no punitive streak.
 - School life is player-paced: at most one counted school-life day per local calendar date.
+- School dinner now finishes in 3 visible bites plus one final action; food quantity changes on every bite.
 
 ## Confirmed stable systems — keep
 1. **3 rewarded snowmen/day + unlimited free work.** Do not add a hard cap to creative sculpting.
@@ -33,25 +34,19 @@ Latest post-baseline UI patch: realistic deruny rendering, CI green
 - clarified `+250 БАЛІВ` / `+150 БАЛІВ` so score is not confused with coins;
 - removed real-retailer wording from fictional story integration.
 
-### Dinner visual hotfix — 2026-09-03
-- Player screenshot exposed that the deruny looked like three brown pellets.
-- Replaced them with four flat overlapping golden potato pancakes with browned edges/highlights and sour cream.
-- GitHub Actions build for commit `9831e932f2154d7bc2fc9eaf864717acab9e27f7` completed successfully.
+### v18.19 — dinner scene rework
+- Replaced five empty taps with **three visible bites**.
+- `dinnerBites` is clamped to `0..3`, so old saves at 4/5 or 5/5 open safely as dinner-complete.
+- The plate visibly loses food after each bite for all five dishes.
+- Deruny remain flat golden potato pancakes with browned edges and sour cream; the old brown-circle rendering stays removed.
+- Varenyky now read as crescent dumplings instead of generic ovals.
+- Holubtsi now have wrapped-roll shape/seam cues.
+- Borshch and banosh visibly shrink as the meal is eaten.
+- Hero, table, plate and warm evening window are now one scene instead of detached objects on a white card.
+- Dinner header is simplified and the long daily-rule sentence is hidden during active eating.
+- Final action remains `ЗАВЕРШИТИ ДЕНЬ`; day-counting logic is unchanged.
 
-## Newly confirmed problems
-### P1 — dinner is still a weak game scene
-The food drawing hotfix fixed the most obvious visual joke, but `drawDinner()` still has structural problems:
-- the full plate remains visible even after all bites;
-- five taps on the same place do not create meaningful interaction;
-- white bite markers compete visually with the food;
-- the snowman is detached from the table/plate;
-- large fixed gaps create dead space on tall phones and poor composition on short phones;
-- the header shows too many counters during a simple end-of-day action.
-
-Implementation spec: `docs/DINNER_SCENE_REWORK.md`.
-
-Target: **3 visible bites**, each changing the plate, then one dominant `ЗАВЕРШИТИ ДЕНЬ` action. Existing saves with `dinnerBites >= 3` must be treated as dinner-complete.
-
+## Current problems
 ### P1 — snowman result-card responsive height
 `drawFinish()` mixes top-fixed and bottom-fixed blocks. On short usable heights, visitor memory and year progress can overlap.
 
@@ -68,7 +63,7 @@ Verify 320–360dp widths for:
 - finish button;
 - visitor line;
 - result card;
-- school dinner scene.
+- new dinner scene.
 
 Shorten Ukrainian copy before shrinking touch targets.
 
@@ -110,6 +105,9 @@ Do not add:
 ### Regional craft / contemporary craft
 Current Ukrainian fashion activity around Ukrainian Fashion Week SS27 includes a strong focus on contemporary reinterpretation of craft. Safe adaptation: **`Зимова майстерня`** — occasional fictional makers bring a scarf/hat pattern inspired by a broad regional craft category. No copying specific garments, logos, collection imagery or claiming participation in Ukrainian Fashion Week.
 
+### School-food nostalgia inspiration — added 2026-09-03
+A current Ukrainian charity food campaign uses school nostalgia, a limited food item and a small puzzle/memory object to make an ordinary snack feel like an event. Safe adaptation: **`Смак зі шкільної перерви`** — on rare school days, dinner or a break can reveal one fictional paper-note/puzzle memory after the normal interaction. No real restaurant names, logos, charity claims, purchases or random paid prizes. The useful pattern is *food + tiny memory*, not the campaign branding.
+
 ### Urban design inspiration
 A fictional **`Зимовий двір`** week can rotate tiny courtyard details — bench, lamp, mailbox, snow sculpture location — and ask the player to choose where the finished snowman is photographed. This changes composition/background only; no extra economy.
 
@@ -117,13 +115,11 @@ A fictional **`Зимовий двір`** week can rotate tiny courtyard details
 Keep **`Тінь сніговика`** as an optional visitor idea: dusk lighting and a silhouette-friendly hat/scarf request, rewarded only as a scrapbook memory.
 
 ## Next tasks for implementation
-**P1.1** Rework dinner from five empty taps to three visible bites; make portion disappear and connect hero + table + plate into one scene.
+**P1.1** Refactor snowman result card into a vertical responsive flow for short phones.
 
-**P1.2** Simplify the school header specifically during DINNER so the player sees the meal and action, not four simultaneous counters.
+**P1.2** Run 320/360dp width and ~430–487dp usable-height regression checks for the snowman result and the new dinner scene.
 
-**P1.3** Refactor snowman result card into a vertical responsive flow for short phones.
-
-**P1.4** Run 320/360dp width and ~430–487dp usable-height regression checks before introducing any new mechanic.
+**P1.3** If dinner still looks crowded below ~430dp usable height, shorten subtitle/instruction copy before shrinking the plate or the 48dp action.
 
 **P2.1** Add optional scrapbook presentation only after the above phone regressions are clean.
 
@@ -136,3 +132,10 @@ The next build should be considered a real improvement only when all of these ar
 5. no primary button is below 48dp;
 6. the 3/day snowman reward rule and one-school-day-per-date rule are unchanged;
 7. no new currency, streak punishment or fake brand partnership is introduced.
+
+## Cycle update — 2026-09-03 evening
+- Closed the largest school-dinner UX problem instead of adding another retention mechanic.
+- Reduced dinner repetition from 5 taps to 3 and made every bite change the plate.
+- Simplified the dinner HUD and turned the white-card layout into a warm table scene.
+- Preserved existing saves and all daily limits.
+- Next P1 is the snowman result-card height collision, then 320–360dp regression testing.
