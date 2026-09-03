@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         float density, textScale, safeTop, safeBottom;
         boolean compact, narrow, finished, rolling, ballReady, draggingBall, sponsorScene, sponsorRewarded, coinsAwarded;
         int balls, score, bestScore, buildQuality, decorQuality, decorPlaced, combo;
-        int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday;
+        int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday, snowCondition;
         long rewardDay;
         long startTime, sponsorStart;
         int finishSeconds;
@@ -77,12 +77,14 @@ public class MainActivity extends Activity {
             wallet=Math.max(0,prefs.getInt("coins",0));
             yearBuilds=Math.max(0,Math.min(3,prefs.getInt("year_builds_"+year,0)));
             syncDailyState();
+            snowCondition=dailySnowCondition();
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeCap(Paint.Cap.ROUND);
             String[] names={"Очі","Морква","Ґудзики","Шарф","Шапка","Руки"};
             for(int i=0;i<ACCESSORY_COUNT;i++) items[i]=new Accessory(i,names[i]);
             mission=dailyMission();
+            tip="Сніг сьогодні: "+snowName()+" • коти першу кулю";
             setClickable(true);
             setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener(){
                 @Override public WindowInsets onApplyWindowInsets(View v,WindowInsets insets){
@@ -110,7 +112,10 @@ public class MainActivity extends Activity {
         boolean requiredDecorReady(){return items[EYES].placed&&items[NOSE].placed&&decorPlaced>=3;}
         int optionalDecorCount(){return Math.max(0,decorPlaced-3);}
         int yearGoal(){return 1100+(year-1)*320;}
-        float effort(){return 1f+(year-1)*.20f;}
+        float effort(){
+            float snow=snowCondition==0?.90f:(snowCondition==1?1.12f:1f);
+            return (1f+(year-1)*.20f)*snow;
+        }
         String ageName(){
             switch(year){
                 case 1:return "Малюк";
@@ -149,6 +154,14 @@ public class MainActivity extends Activity {
             long seed=rewardDay*31L+year*17L;
             return (int)Math.floorMod(seed,3L);
         }
+        int dailySnowCondition(){return (int)Math.floorMod(rewardDay*13L+7L,3L);}
+        String snowName(){return snowCondition==0?"ПУХКИЙ":(snowCondition==1?"МОКРИЙ":"КРИЖАНИЙ");}
+        void refreshDailyIfNeeded(){
+            long now=localDayNumber();
+            if(now==rewardDay)return;
+            syncDailyState();mission=dailyMission();snowCondition=dailySnowCondition();
+            tip="Новий день • сніг: "+snowName()+" • коти першу кулю";
+        }
         String timeText(int s){return String.format("%d:%02d",s/60,s%60);}
         void buzz(int ms){
             if(vibrator==null||!vibrator.hasVibrator())return;
@@ -158,6 +171,7 @@ public class MainActivity extends Activity {
 
         @Override protected void onDraw(Canvas c){
             super.onDraw(c);
+            refreshDailyIfNeeded();
             layout();
             if(sponsorScene){drawSponsor(c);postInvalidateOnAnimation();return;}
             drawBackground(c);
@@ -272,7 +286,7 @@ public class MainActivity extends Activity {
             text.setTextAlign(Paint.Align.RIGHT);text.setTextSize(tx(narrow?7.4f:8.4f));text.setColor(Color.rgb(34,104,146));
             c.drawText(rewardedBuildsToday<3?("НАГОРОДИ "+rewardedBuildsToday+"/3"):"ВІЛЬНА РОБОТА",hud.right-dp(14),hud.top+dp(22),text);
             text.setTextSize(tx(6.4f));text.setColor(Color.rgb(108,139,154));
-            c.drawText("Рік "+year+" • ● "+wallet,hud.right-dp(14),hud.bottom-dp(11),text);
+            c.drawText("СНІГ: "+snowName()+" • Рік "+year+" • ● "+wallet,hud.right-dp(14),hud.bottom-dp(11),text);
         }
 
         void drawTip(Canvas c){
@@ -362,7 +376,8 @@ public class MainActivity extends Activity {
         }
 
         float tolerance(int type){
-            float mul=Math.max(.72f,1f-(year-1)*.035f);
+            float snow=snowCondition==0?1.06f:(snowCondition==2?.90f:.98f);
+            float mul=Math.max(.72f,1f-(year-1)*.035f)*snow;
             if(type==HAT)return headR*.95f*mul;
             if(type==ARMS||type==SCARF||type==BUTTONS)return midR*.90f*mul;
             return headR*.80f*mul;
@@ -594,7 +609,7 @@ public class MainActivity extends Activity {
         void reset(){
             balls=0;score=0;buildQuality=0;decorQuality=0;decorPlaced=0;combo=0;finished=false;rolling=false;ballReady=false;draggingBall=false;draggingAccessory=-1;
             sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();mission=dailyMission();giftType=-1;
-            tip="Коти сніг пальцем — зроби першу кулю";rollX=Float.NaN;rollY=Float.NaN;
+            refreshDailyIfNeeded();tip="Сніг сьогодні: "+snowName()+" • коти першу кулю";rollX=Float.NaN;rollY=Float.NaN;
             for(Accessory a:items){a.placed=false;a.quality=0;a.x=a.y=0;}
             buzz(18);invalidate();
         }

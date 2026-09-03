@@ -1,7 +1,7 @@
 # SnowmanGame — player return / mobile loop plan
 
 Updated: 2026-09-03
-Current Android build: v18.14
+Current Android build: v18.15
 
 ## Current state
 - Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one daily mission, receive coins on up to 3 rewarded builds per local calendar date.
@@ -15,8 +15,10 @@ Current Android build: v18.14
 2. **Prototype daily counter is still not actually daily.** `snowman_completed_today` is stored without a date key/reset, so the HTML prototype can remain exhausted on following days. Do not port this bug back into Android.
 3. **Mission reroll — fixed in v18.13.** Mission is deterministic for local calendar day + year and stays unchanged through replays.
 4. **Forced 6/6 completion — fixed in v18.14.** Eyes + carrot + any third part unlock completion; the remaining parts stay optional and add style/score.
-5. **Task-first HUD — improved in v18.14.** Current tactile step and daily reward/free status are primary; year/wallet are secondary. Daily snow condition is still missing.
-6. **Build source mutation — fixed in v18.12.** Dinner UI is canonical in source; Gradle no longer patches Java before compilation.
+5. **Task-first HUD — improved in v18.14.** Current tactile step and daily reward/free status are primary; year/wallet are secondary.
+6. **Daily snow condition — fixed in v18.15.** `ПУХКИЙ / МОКРИЙ / КРИЖАНИЙ` is deterministic for the local calendar date, shown compactly, and slightly changes rolling/placement feel.
+7. **Midnight-open Activity stale day — fixed in v18.15.** The view notices a local date change without requiring an Activity restart and refreshes reward quota, mission and snow together.
+8. **Build source mutation — fixed in v18.12.** Dinner UI is canonical in source; Gradle no longer patches Java before compilation.
 
 ## Direction to keep
 - No hard limit on creative/free sculpting.
@@ -48,10 +50,11 @@ Current Android build: v18.14
 - HUD prioritizes current sculpting step and today's 3-reward/free-work status; year/wallet are secondary.
 
 ## Next implementation priorities
-### P2 — daily snow condition
-- Add one date-stable condition: `ПУХКИЙ`, `МОКРИЙ`, or `КРИЖАНИЙ`.
-- Condition changes actual feel slightly: rolling effort / placement tolerance, never making a run impossible.
-- Show the condition before play and with a small icon/word during sculpting; do not add another large HUD panel.
+### DONE v18.15 — daily snow feel + midnight refresh
+- Added date-stable `ПУХКИЙ / МОКРИЙ / КРИЖАНИЙ` snow.
+- Powder is slightly easier to roll, wet snow takes slightly more movement, icy snow slightly tightens placement tolerance.
+- Snow is shown in the existing HUD line and opening tip; no extra card/panel.
+- A date change while the Activity remains open refreshes quota, mission and snow together.
 
 ### P2 — daily curiosity card
 - One optional visitor/client per day asks for a style: stable / funny / photo-friendly / regional-pattern.
@@ -76,10 +79,10 @@ Aurora introduced RORI on 31 August 2026 as a curious explorer character used ac
 - Reintroducing random mission rerolls or elapsed-24h daily timers.
 
 ## Definition of next working state
-The v18.14 expressive-completion milestone is achieved. The next working milestone should be considered ready when:
-1. a date-stable snow condition visibly and mechanically changes the run;
-2. the condition is communicated without another large HUD panel;
-3. one optional daily curiosity/client card adds variety without another farmable currency;
+The v18.15 daily-snow milestone is achieved. The next working milestone should be considered ready when:
+1. one optional daily curiosity/client card adds variety without another farmable currency;
+2. the visitor request is deterministic for the local date and cannot be rerolled by replay;
+3. compact phones keep the snowman, accessory tray and finish button readable;
 4. daily reward/free-mode rules from v18.13 remain intact;
 5. school and pre-school story routing remain unaffected.
 
@@ -98,3 +101,10 @@ The v18.14 expressive-completion milestone is achieved. The next working milesto
 - Rebalanced the speed mission to avoid becoming trivial after fewer mandatory actions.
 - Next P2 is date-stable snow feel; after that, add one optional daily curiosity/client card.
 - Fresh business inspiration: the August 2026 multi-brand “Покоління 91” collaboration suggests a safe non-branded “майстерня чотирьох майстрів” cosmetic-memory week: different fictional makers contribute scarf/hat/button styles, with no logos, purchases or claims of partnership.
+
+## Cycle update — 2026-09-03 morning
+- Added date-stable daily snow feel rather than another menu or currency.
+- Fixed the stale-day edge case when the app stays open across local midnight.
+- Kept the mechanical differences intentionally small so daily variation creates curiosity rather than punishment.
+- Next P2 is one optional daily curiosity visitor/client and compact-phone regression testing.
+- Fresh inspiration: Ukrainian retail coverage around late-August 2026 highlights strong familiar national brands; adapt the useful pattern as fictional rotating local makers/visitors, not logos or claimed partnerships.
