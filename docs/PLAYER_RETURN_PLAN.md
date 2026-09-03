@@ -10,6 +10,7 @@ Current Android build: v18.18
 - Daily mission, snow condition and visitor are snapshotted for an active snowman so midnight cannot change its rules mid-run; the reward quota still uses the real local completion date.
 - School-week branch is player-paced; pre-school ice cream is a one-time story scene before school only.
 - DONE/dinner phone layouts are enlarged and `app/build.gradle` no longer rewrites Java source during preBuild.
+- The signed v18.18 APK passed canonical validation, Gradle release build, zipalign and APK signature verification.
 - A separate HTML mobile prototype explored a useful order loop: 3 paid jobs per day, unlimited free sculpting, 3 client choices and snow conditions.
 
 ## Confirmed problems
@@ -23,6 +24,7 @@ Current Android build: v18.18
 8. **Build source mutation — fixed in v18.12.** Dinner UI is canonical in source; Gradle no longer patches Java before compilation.
 9. **Ambiguous score copy — fixed in v18.18.** Mission and story bonuses explicitly say `БАЛІВ`, so they cannot be mistaken for coin rewards.
 10. **Pseudo-collaboration wording — hardened in v18.18.** Gameplay scenes no longer name a real retailer as if it supplied an item; integration copy explicitly states there is no real partnership.
+11. **Short-result-card overlap — confirmed after v18.18 audit.** `drawFinish()` caps the normal compact card at 478dp but can shrink below that when usable screen height is smaller. The visitor block ends around `card.top + 292dp`, while year progress begins at `card.bottom - 178dp`; when card height drops below about 470dp these regions overlap. Width-only testing would miss this. Fix should stack result sections from one vertical flow or switch to a shorter copy preset before any 48dp action target is reduced.
 
 ## Direction to keep
 - No hard limit on creative/free sculpting.
@@ -32,6 +34,7 @@ Current Android build: v18.18
 - Phone UI: one dominant action, 48dp+ touch targets, no important interaction behind system bars, minimal text while sculpting.
 - Story integrations must be clearly fictional/inspired; never claim an official brand partnership.
 - Once a player starts a snowman, its mission/snow/visitor rules must remain stable until that run ends.
+- Compact UI fixes should shorten/reflow text before shrinking controls or the snowman itself.
 
 ## Completed milestones
 ### DONE v18.12 — pre-school story placement
@@ -76,8 +79,14 @@ Current Android build: v18.18
 - Real retailer naming was removed from the fictional carrot scene and the scene now states that no real partnership exists.
 
 ## Next implementation priorities
-### P1 — compact-phone regression
-- Verify 320–360dp-wide layouts after the larger accessory tray and visitor result line.
+### P1 — result-card responsive height
+- Fix `drawFinish()` so visitor, year progress and journey action cannot overlap on roughly 430–487dp usable-height phones.
+- Prefer a single top-to-bottom vertical layout calculation instead of mixing `card.top + fixedOffset` and `card.bottom - fixedOffset` for adjacent sections.
+- Add a short-copy mode before shrinking any action below 48dp: e.g. `СПОГАД • ФОТОГРАФ`, `РІК 2/3`, `ДО ВОКЗАЛУ`.
+- Preserve result hierarchy: score → reward/free status → mission → visitor memory → year progress → dominant journey action → replay.
+
+### P1 — narrow-width regression
+- Verify 320–360dp widths after the larger accessory tray and visitor result line.
 - Check long Ukrainian labels in the HUD, finish button, visitor line and journey button.
 - If crowded, shorten copy before shrinking touch targets below 48dp.
 
@@ -95,6 +104,9 @@ Challenge/route/reward patterns can become **“Зимовий маршрут”
 ### Aurora RORI inspiration — added 2026-09-02
 Aurora introduced RORI on 31 August 2026 as a curious explorer character used across stores/app communication. Safe game adaptation: **“Зимовий дослідник”** — a non-branded recurring character who occasionally brings one strange snowman part, material or tiny challenge. The useful mechanic is curiosity/discovery, not the mascot appearance, name, logo or prizes.
 
+### Light-and-shadow fashion inspiration — added 2026-09-03
+A current Ukrainian fashion theme is using light/shadow and cinematic contrast as a collection concept. Safe game adaptation: **“Тінь сніговика”** — an occasional fictional photographer asks for a silhouette/photo-friendly build at dusk. The mechanic can change background lighting and ask for a recognizable hat/scarf silhouette, while awarding only a scrapbook memory. Do not copy a real collection, designer marks, garment designs or campaign imagery.
+
 ## Avoid
 - Fake logos or wording implying an official partnership.
 - Real-money/lottery-like mechanics tied to business brands.
@@ -102,14 +114,16 @@ Aurora introduced RORI on 31 August 2026 as a curious explorer character used ac
 - More than 3 monetized/progression completions per day until economy testing says otherwise.
 - Reintroducing random mission rerolls or elapsed-24h daily timers.
 - Changing a mission, snow physics or visitor target after the current snowman has started.
+- Solving compact layouts by making primary actions too small to tap reliably.
 
 ## Definition of next working state
 v18.18 is the current logic-stable baseline. The next working milestone should be considered ready when:
-1. 320–360dp phones keep the snowman, accessory tray, finish action and result card readable;
-2. no label collision requires shrinking important touch targets below 48dp;
-3. the visitor memory surface remains optional and has no farmable currency;
-4. daily reward/free-mode rules from v18.13 and active-run snapshot rules from v18.18 remain intact;
-5. school and pre-school story routing remain unaffected.
+1. 320–360dp-wide and roughly 430–487dp usable-height phones keep the snowman, accessory tray, finish action and result card readable;
+2. result sections never overlap when the card is shorter than its nominal 478dp compact height;
+3. no label collision requires shrinking important touch targets below 48dp;
+4. the visitor memory surface remains optional and has no farmable currency;
+5. daily reward/free-mode rules from v18.13 and active-run snapshot rules from v18.18 remain intact;
+6. school and pre-school story routing remain unaffected.
 
 ## Cycle update — 2026-09-02 late evening
 - Closed unlimited Android coin/progression farming with a local-date 3/day quota.
@@ -122,7 +136,7 @@ v18.18 is the current logic-stable baseline. The next working milestone should b
 - Closed the forced 6/6 accessory gate without removing optional decoration.
 - Preserved all six accessories and their score value, but made completion expressive after three meaningful parts.
 - Reserved a one-handed bottom finish action and simplified the HUD hierarchy.
-- Rebalanced the speed mission to avoid becoming trivial after fewer mandatory actions.
+- Rebalanced the speed mission to avoid becoming trivial after fewer mandatory interactions.
 
 ## Cycle update — 2026-09-03 morning
 - Added date-stable daily snow feel rather than another menu or currency.
@@ -143,4 +157,10 @@ v18.18 is the current logic-stable baseline. The next working milestone should b
 - Split reward date from challenge snapshot: `rewardDay` follows the real local completion date; `challengeDay` stays fixed for the active snowman.
 - Fixed misleading result text so score bonuses are not confused with coins.
 - Removed a real retailer name from the carrot vignette and made fictional/non-partner status explicit.
-- Next priority is compact-phone regression rather than adding another daily mechanic.
+
+## Cycle update — 2026-09-03 compact result audit
+- Confirmed the v18.18 APK build/signature pipeline is green.
+- Found that the next UI risk is height, not only width: a result card below about 470dp can overlap the visitor-memory and year-progress regions because the two groups use opposite fixed anchors.
+- Promoted responsive result-card height to P1 and specified the fix as one vertical flow plus short-copy fallback, preserving 48dp actions.
+- Kept all daily economy and active-run rules unchanged; no new currency or daily cap was added.
+- Fresh visual inspiration: current Ukrainian fashion coverage around light/shadow suggests a fictional dusk-photographer memory request, used only as an aesthetic prompt rather than a claimed collaboration.
