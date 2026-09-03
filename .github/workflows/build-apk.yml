@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -30,9 +30,6 @@ jobs:
             -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
-
-      - name: Apply v18.14 expressive completion
-        run: python scripts/apply_v18_14_expressive_completion.py
 
       - name: Validate canonical v18.14 source tree
         run: |
@@ -76,19 +73,6 @@ jobs:
           if failed: raise SystemExit('v18.14 checks failed: '+'; '.join(failed))
           print('Canonical v18.14 source tree OK')
           PY
-
-      - name: Persist v18.14 canonical sources
-        if: github.event_name == 'push'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java docs/PLAYER_RETURN_PLAN.md
-          if git diff --cached --quiet; then
-            echo 'v18.14 sources already canonical'
-          else
-            git commit -m 'Normalize v18.14 expressive completion and mobile HUD'
-            git push
-          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
