@@ -45,7 +45,7 @@ jobs:
             'dinner simplified header':'вечеря завершує день' in school,
             'old five-bite copy removed':"З'їдено "+chr(34) not in school and 'dinnerBites<5' not in school,
             'deruny pellets removed':'c.drawCircle(x+i*r*.34f,y,r*.22f,p)' not in school,
-            'deruny flat stack':'RectF pancake=' in school and 'x+r*.58f,y-r*.03f,r*.13f' in school,
+            'deruny flat stack':'RectF pancake=' in school and 'ГАЛИЧИНА' in school and 'СМЕТАНА' in school and 'float cupX=' in school,
             'varenyky crescents':'c.drawArc(dumpling,0,180,false,stroke);' in school,
             'plan v18.19':'Current Android baseline: v18.19' in plan and 'v18.19 — dinner scene rework' in plan,
             'versionCode 52':re.search(r'versionCode\s+52\b',gradle) is not None,
