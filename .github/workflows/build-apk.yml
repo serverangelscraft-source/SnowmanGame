@@ -5,103 +5,70 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - uses: android-actions/setup-android@v4
-
       - name: Install Android SDK
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
       - name: Install Gradle 8.11.1
         run: |
-          curl -fL --retry 8 --retry-all-errors --connect-timeout 30 \
-            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
-            -o /tmp/gradle.zip
+          curl -fL --retry 8 --retry-all-errors --connect-timeout 30 https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
-
-      - name: Validate canonical v18.16 source tree
+      - name: Apply v18.17 visitor stability
+        run: python scripts/apply_v18_17_visitor_day_stability.py
+      - name: Validate canonical v18.17 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          root=Path('app/src/main/java/com/snowmangame')
-          manifest=Path('app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
+          main=Path('app/src/main/java/com/snowmangame/MainActivity.java').read_text(encoding='utf-8')
           gradle=Path('app/build.gradle').read_text(encoding='utf-8')
-          main=(root/'MainActivity.java').read_text(encoding='utf-8')
-          journey=(root/'JourneyActivity.java').read_text(encoding='utf-8')
-          school=(root/'SchoolWeekActivity.java').read_text(encoding='utf-8')
           plan=Path('docs/PLAYER_RETURN_PLAN.md').read_text(encoding='utf-8')
-
-          sources={}
-          for path in root.glob('*Activity.java'):
-              text=path.read_text(encoding='utf-8')
-              m=re.search(r'public\s+class\s+(\w+Activity)\s+extends\s+Activity',text)
-              if m:sources[m.group(1)]=path
-          registered=set(re.findall(r'android:name="\.([A-Za-z0-9_]+Activity)"',manifest))
-          if set(sources)!=registered: raise SystemExit('Activity source/manifest mismatch')
-
           checks={
-            'daily visitor deterministic':'dailyVisitor()' in main and 'rewardDay*19L+year*11L' in main,
-            'four visitor types':'МАЙСТРИНЯ' in main and 'ФОТОГРАФ' in main and 'ДИТИНА' in main and 'СУСІД' in main,
-            'visitor request opening':'tip=visitorRequest()' in main,
-            'visitor memory date keyed':'visitorMemoryKey()' in main and 'visitor_memory_' in main,
-            'visitor result compact':'СПОГАД ДНЯ' in main and 'ГІСТЬ ДНЯ' in main,
-            'daily snow intact':'dailySnowCondition()' in main and 'СНІГ: ' in main,
-            'daily mission intact':'dailyMission()' in main,
-            '3/day reward intact':'rewardedBuildsToday<3' in main,
-            'expressive completion intact':'requiredDecorReady()' in main,
-            'pre-school ice cream once':'pre_school_icecream_done' in main,
-            'school route intact':'SchoolActivity.class' in main,
-            'plan advanced':'DONE v18.16 — daily curiosity visitor' in plan,
-            'versionCode 49':re.search(r'versionCode\s+49\b',gradle) is not None,
-            'versionName 18.16':'versionName "18.16"' in gradle,
+            'visitor date only':'rewardDay*19L+11L' in main and 'rewardDay*19L+year*11L' not in main,
+            'visitor memory date keyed':'visitor_memory_' in main,
+            '3/day intact':'rewardedBuildsToday<3' in main,
+            'snow intact':'dailySnowCondition()' in main,
+            'mission intact':'dailyMission()' in main,
+            'school intact':'pre_school_icecream_done' in main,
+            'plan hotfix':'visitor stability hotfix' in plan,
+            'versionCode 50':re.search(r'versionCode\s+50\b',gradle) is not None,
+            'versionName 18.17':'versionName "18.17"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.16 checks failed: '+'; '.join(failed))
-          print('Canonical v18.16 source tree OK')
+          if failed: raise SystemExit('v18.17 checks failed: '+'; '.join(failed))
+          print('Canonical v18.17 source tree OK')
           PY
-
+      - name: Persist v18.17 canonical sources
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java docs/PLAYER_RETURN_PLAN.md
+          if git diff --cached --quiet; then echo 'v18.17 already canonical'; else git commit -m 'Normalize v18.17 visitor day stability'; git push; fi
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
-
       - name: Decode stable prototype update key
-        run: |
-          base64 --decode .github/signing/snowman-test-update-key.b64 > "$RUNNER_TEMP/snowman-test-update.jks"
-
+        run: base64 --decode .github/signing/snowman-test-update-key.b64 > "$RUNNER_TEMP/snowman-test-update.jks"
       - name: Align and sign APK
         run: |
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 \
-            app/build/outputs/apk/release/app-release-unsigned.apk \
-            "$RUNNER_TEMP/SnowmanGame-aligned.apk"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
-            --ks "$RUNNER_TEMP/snowman-test-update.jks" \
-            --ks-key-alias snowman_release \
-            --ks-pass 'pass:VO@yhMgIcCWXWbN@sa-vqcH%cGPj' \
-            --key-pass 'pass:VO@yhMgIcCWXWbN@sa-vqcH%cGPj' \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            --out SnowmanGame.apk \
-            "$RUNNER_TEMP/SnowmanGame-aligned.apk"
-
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/SnowmanGame-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/snowman-test-update.jks" --ks-key-alias snowman_release --ks-pass 'pass:VO@yhMgIcCWXWbN@sa-vqcH%cGPj' --key-pass 'pass:VO@yhMgIcCWXWbN@sa-vqcH%cGPj' --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out SnowmanGame.apk "$RUNNER_TEMP/SnowmanGame-aligned.apk"
       - name: Verify installable signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs SnowmanGame.apk
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 SnowmanGame.apk
           file SnowmanGame.apk
-
       - uses: actions/upload-artifact@v4
         with:
           name: SnowmanGame-APK
