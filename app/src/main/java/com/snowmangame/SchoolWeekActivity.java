@@ -129,13 +129,7 @@ public class SchoolWeekActivity extends Activity {
             prefs.edit().putLong("school_player_last_seen_day",lastSeen).putLong("school_player_stage_day",effectiveDay).putInt("school_player_stage",stage).putInt("school_grade",grade).putInt("school_winter",winter).putBoolean("class2_started",true).apply();
         }
 
-        void refreshDateIfNeeded(){
-            long now=localDayNumber();
-            if(now==today)return;
-            initState();
-            invalidate();
-        }
-
+        void refreshDateIfNeeded(){long now=localDayNumber();if(now==today)return;initState();invalidate();}
         int defaultStage(){if(isWeekday())return schoolDone<5?MORNING:BONUS;return weekendDone<2?WEEKEND:BONUS;}
         void resetMiniForDate(){bagMask=0;miniHits=0;homeStep=0;dinnerBites=0;feedback="";weekendChoice="";prefs.edit().putInt("school_player_bag_mask",0).putInt("school_player_mini_hits",0).putInt("school_player_home_step",0).putInt("school_player_dinner_bites",0).putString("school_player_weekend_choice","").apply();}
         long localDayNumber(){Calendar local=Calendar.getInstance();int y=local.get(Calendar.YEAR),m=local.get(Calendar.MONTH),d=local.get(Calendar.DAY_OF_MONTH);GregorianCalendar utc=new GregorianCalendar(TimeZone.getTimeZone("UTC"));utc.clear();utc.set(y,m,d,0,0,0);return utc.getTimeInMillis()/86400000L;}
@@ -150,31 +144,13 @@ public class SchoolWeekActivity extends Activity {
         @Override protected void onDraw(Canvas c){super.onDraw(c);drawBackground(c);drawHeader(c);if(stage==INTRO){drawIntro(c);return;}if(stage==YEAR_DONE){drawYearDone(c);return;}if(stage==DONE){drawDone(c);return;}if(stage==BONUS){drawBonus(c);return;}if(stage==WEEKEND){drawWeekendChoice(c);return;}if(stage==WEEKEND_MINI){drawWeekendMini(c);return;}if(stage==MORNING){drawMorning(c);return;}if(stage==LESSON1){drawLesson(c,false);return;}if(stage==BREAK){drawBreak(c);return;}if(stage==LESSON2){drawLesson(c,true);return;}if(stage==HOME){drawHome(c);return;}drawDinner(c);}
 
         void drawBackground(Canvas c){float w=getWidth(),h=getHeight(),bottom=h-safeBottom;if(isWeekday()){LinearGradient g=new LinearGradient(0,0,0,bottom,Color.rgb(242,236,216),Color.rgb(229,224,203),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);p.setColor(Color.rgb(193,158,114));c.drawRect(0,bottom-dp(78),w,h,p);}else{LinearGradient g=new LinearGradient(0,0,0,bottom,Color.rgb(164,220,246),Color.rgb(238,249,253),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);p.setColor(Color.rgb(246,251,253));c.drawRect(0,bottom*.67f,w,h,p);}}
-        void drawHeader(Canvas c){
-            float w=getWidth(),top=safeTop+dp(10),headerH=stage==DINNER?dp(92):dp(124);
-            RectF r=new RectF(dp(14),top,w-dp(14),top+headerH);
-            p.setColor(Color.argb(247,255,255,255));c.drawRoundRect(r,dp(24),dp(24),p);
-            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(7));text.setColor(Color.rgb(101,128,142));
-            c.drawText("ШКОЛА • ЗИМА "+winter+" • "+className(),r.left+dp(17),r.top+dp(20),text);
-            text.setTextSize(tx(stage==DINNER?15:17));text.setColor(Color.rgb(38,73,94));
-            String title=stage==DINNER?("День "+Math.max(1,currentNumber())+"/7 • ВЕЧІР"):(stage==BONUS?"Бонусний день":("День "+Math.max(1,currentNumber())+"/7 • "+dayName()));
-            c.drawText(title,r.left+dp(17),r.top+dp(51),text);
-            text.setTextSize(tx(7.2f));text.setColor(Color.rgb(91,123,139));
-            if(stage==DINNER){
-                c.drawText("Навчання "+schoolDone+"/5 • вечеря завершує день",r.left+dp(17),r.top+dp(75),text);
-            }else{
-                c.drawText("Прогрес року: навчання "+schoolDone+"/5 • вихідні "+weekendDone+"/2",r.left+dp(17),r.top+dp(78),text);
-                text.setTextSize(tx(6.5f));text.setColor(Color.rgb(119,139,147));
-                c.drawText("Пропущений день не рахується • за одну дату максимум 1 день життя",r.left+dp(17),r.top+dp(101),text);
-            }
-        }
+        void drawHeader(Canvas c){float w=getWidth(),top=safeTop+dp(10),headerH=stage==DINNER?dp(92):dp(124);RectF r=new RectF(dp(14),top,w-dp(14),top+headerH);p.setColor(Color.argb(247,255,255,255));c.drawRoundRect(r,dp(24),dp(24),p);text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(7));text.setColor(Color.rgb(101,128,142));c.drawText("ШКОЛА • ЗИМА "+winter+" • "+className(),r.left+dp(17),r.top+dp(20),text);text.setTextSize(tx(stage==DINNER?15:17));text.setColor(Color.rgb(38,73,94));String title=stage==DINNER?("День "+Math.max(1,currentNumber())+"/7 • ВЕЧІР"):(stage==BONUS?"Бонусний день":("День "+Math.max(1,currentNumber())+"/7 • "+dayName()));c.drawText(title,r.left+dp(17),r.top+dp(51),text);text.setTextSize(tx(7.2f));text.setColor(Color.rgb(91,123,139));if(stage==DINNER){c.drawText("Навчання "+schoolDone+"/5 • вечеря завершує день",r.left+dp(17),r.top+dp(75),text);}else{c.drawText("Прогрес року: навчання "+schoolDone+"/5 • вихідні "+weekendDone+"/2",r.left+dp(17),r.top+dp(78),text);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(119,139,147));c.drawText("Пропущений день не рахується • за одну дату максимум 1 день життя",r.left+dp(17),r.top+dp(101),text);}}
         RectF card(){float bottom=getHeight()-safeBottom;float top=stage==DINNER?safeTop+dp(112):safeTop+dp(155);return new RectF(dp(20),top,getWidth()-dp(20),bottom-dp(88));}
         void cardBase(Canvas c,RectF r){p.setColor(Color.argb(246,255,255,255));c.drawRoundRect(r,dp(27),dp(27),p);}
         void centerText(Canvas c,String s,float y,float size,int color){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(size));text.setColor(color);while(text.measureText(s)>getWidth()-dp(70)&&text.getTextSize()>tx(5.2f))text.setTextSize(text.getTextSize()-dp(.25f));c.drawText(s,getWidth()/2f,y,text);}
         void centerTextAt(Canvas c,String s,float x,float y,float size,int color){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(size));text.setColor(color);c.drawText(s,x,y,text);}
 
         void drawIntro(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"НОВА ЗИМА",r.top+dp(32),7,Color.rgb(111,132,139));centerText(c,className(),r.top+dp(82),25,Color.rgb(42,106,141));centerText(c,"Тема року: «"+theme()+"»",r.top+dp(117),9,Color.rgb(82,117,133));centerText(c,"Рік пройде тільки після 5 навчальних і 2 вихідних, які ти реально проживеш.",r.top+dp(151),7.2f,Color.rgb(99,124,134));centerText(c,"Якщо не зайдеш завтра — нічого не втратиться.",r.top+dp(175),7.2f,Color.rgb(99,124,134));drawHero(c,r.centerX(),r.bottom-dp(55),dp(46));button(c,"ПОЧАТИ ЦЕЙ РІК");}
-
         void drawMorning(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ЕТАП 1/6 • РАНОК",r.top+dp(28),7,Color.rgb(111,132,139));centerText(c,"Збери рюкзак до "+className(),r.top+dp(64),15,Color.rgb(48,82,99));centerText(c,"Знайди 3 речі, які справді потрібні до школи.",r.top+dp(92),7.2f,Color.rgb(102,127,138));float left=r.left+dp(18),right=r.right-dp(18),gap=dp(8),top=r.top+dp(122),cw=(right-left-gap)/2f,ch=dp(72);for(int i=0;i<5;i++){int row=i/2,col=i%2;float xx=left+col*(cw+gap),yy=top+row*(ch+gap);if(i==4)xx=r.centerX()-cw/2f;bagRects[i].set(xx,yy,xx+cw,yy+ch);boolean chosen=(bagMask&(1<<i))!=0;p.setColor(chosen?Color.rgb(221,243,232):Color.rgb(239,247,250));c.drawRoundRect(bagRects[i],dp(16),dp(16),p);centerTextAt(c,BAG[i],bagRects[i].centerX(),bagRects[i].centerY()+dp(3),6.6f,chosen?Color.rgb(52,126,96):Color.rgb(52,101,127));}centerText(c,"Зібрано "+Integer.bitCount(bagMask&7)+"/3",r.bottom-dp(110),7,Color.rgb(89,122,137));if((bagMask&7)==7)button(c,"ДО ШКОЛИ");else action.setEmpty();}
 
         String lessonTitle(boolean second){int o=schoolOrdinal();if(!second){switch(o){case 1:return"Ранкова зустріч";case 2:return"Математика зі сніжками";case 3:return"Урок про тепло";case 4:return"Допомога Іскрику";default:return"П'ятнична справа класу";}}switch(o){case 1:return"Класна розмова";case 2:return"Ще одна задача";case 3:return"Холод і тепло";case 4:return"Командна робота";default:return"Порядок у класі";}}
@@ -186,123 +162,18 @@ public class SchoolWeekActivity extends Activity {
         void movingTarget(RectF r){float zoneTop=r.top+dp(130),zoneBottom=r.bottom-dp(150);long ms=SystemClock.elapsedRealtime()+miniHits*737L;float phase=(ms%2600L)/2600f;float xx=r.left+dp(55)+(r.width()-dp(110))*(.5f+.5f*(float)Math.sin(phase*Math.PI*2));float yy=zoneTop+(zoneBottom-zoneTop)*(.5f+.42f*(float)Math.cos(phase*Math.PI*2*1.37));target.set(xx-dp(28),yy-dp(28),xx+dp(28),yy+dp(28));}
         void drawTarget(Canvas c,boolean done){p.setColor(done?Color.rgb(215,239,226):Color.rgb(225,244,252));c.drawCircle(target.centerX(),target.centerY(),dp(27),p);text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(20));text.setColor(Color.rgb(57,139,188));c.drawText("✣",target.centerX(),target.centerY()+dp(7),text);}
         void drawBreak(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ЕТАП 3/6 • ПЕРЕРВА",r.top+dp(28),7,Color.rgb(111,132,139));centerText(c,"Сніжик кидає сніжинки",r.top+dp(65),16,Color.rgb(48,82,99));centerText(c,"Влуч по рухомій сніжинці 3 рази.",r.top+dp(93),7.2f,Color.rgb(102,127,138));movingTarget(r);drawTarget(c,miniHits>=3);centerText(c,"Влучання "+Math.min(3,miniHits)+"/3",r.bottom-dp(110),7.2f,Color.rgb(89,122,137));drawHero(c,r.left+dp(85),r.bottom-dp(36),dp(31));drawFriend(c,r.right-dp(74),r.bottom-dp(36),dp(27));if(miniHits>=3)button(c,"ДЗВІНОК НА УРОК");else{action.setEmpty();postInvalidateOnAnimation();}}
-
         void drawHome(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ЕТАП 5/6 • ДОРОГА ДОДОМУ",r.top+dp(28),7,Color.rgb(111,132,139));centerText(c,"Пройди слідами від школи додому",r.top+dp(67),15,Color.rgb(48,82,99));centerText(c,"Натискай сліди по черзі.",r.top+dp(95),7.2f,Color.rgb(102,127,138));float yy=r.centerY()-dp(10),left=r.left+dp(55),right=r.right-dp(55);stroke.setStrokeWidth(dp(3));stroke.setColor(Color.rgb(205,221,228));c.drawLine(left,yy,right,yy,stroke);for(int i=0;i<4;i++){float xx=left+(right-left)*i/3f;pathRects[i].set(xx-dp(25),yy-dp(25),xx+dp(25),yy+dp(25));p.setColor(i<homeStep?Color.rgb(214,239,226):(i==homeStep?Color.rgb(252,214,87):Color.rgb(235,243,247)));c.drawCircle(xx,yy,dp(22),p);centerTextAt(c,""+(i+1),xx,yy+dp(4),7,Color.rgb(65,111,137));}drawHero(c,r.left+dp(76),r.bottom-dp(40),dp(31));drawFriend(c,r.right-dp(72),r.bottom-dp(40),dp(27));if(homeStep>=4)button(c,"МИ ВДОМА");else action.setEmpty();}
 
-        void drawDinner(Canvas c){
-            RectF r=card();cardBase(c,r);
-            int idx=Math.max(0,Math.min(4,schoolDone));
-            int eaten=Math.max(0,Math.min(3,dinnerBites)),remaining=3-eaten;
-            centerText(c,"ВЕЧЕРЯ • "+schoolOrdinal()+"/5",r.top+dp(25),7,Color.rgb(113,134,141));
-            centerText(c,DISHES[idx],r.top+dp(62),Math.min(23,getWidth()/dp(15)),Color.rgb(48,82,99));
-            centerText(c,eaten>=3?"Смачно. День майже завершено.":"Три короткі укуси — і відпочивати.",r.top+dp(86),7.2f,Color.rgb(99,124,134));
-
-            float sceneBottom=r.bottom-dp(eaten>=3?82:48);
-            RectF scene=new RectF(r.left+dp(10),r.top+dp(98),r.right-dp(10),sceneBottom);
-            LinearGradient warm=new LinearGradient(0,scene.top,0,scene.bottom,Color.rgb(255,240,210),Color.rgb(224,179,128),Shader.TileMode.CLAMP);
-            p.setShader(warm);c.drawRoundRect(scene,dp(22),dp(22),p);p.setShader(null);
-            p.setColor(Color.rgb(112,157,180));
-            RectF window=new RectF(scene.left+dp(13),scene.top+dp(13),scene.left+Math.min(dp(76),scene.width()*.27f),scene.top+Math.min(dp(82),scene.height()*.34f));
-            c.drawRoundRect(window,dp(10),dp(10),p);
-            p.setColor(Color.rgb(239,247,250));c.drawRect(window.centerX()-dp(1),window.top,window.centerX()+dp(1),window.bottom,p);c.drawRect(window.left,window.centerY()-dp(1),window.right,window.centerY()+dp(1),p);
-
-            float tableY=scene.top+scene.height()*.64f;
-            float heroR=Math.max(dp(28),Math.min(dp(43),Math.min(scene.width()*.13f,scene.height()*.18f)));
-            float heroX=scene.centerX()-scene.width()*.22f;
-            drawHero(c,heroX,tableY+dp(52),heroR);
-            p.setColor(Color.rgb(151,102,68));c.drawRoundRect(new RectF(scene.left,tableY,scene.right,scene.bottom+dp(8)),dp(8),dp(8),p);
-            p.setColor(Color.rgb(190,137,91));c.drawRect(scene.left,tableY,scene.right,tableY+dp(10),p);
-
-            float dishX=scene.centerX()+scene.width()*.18f;
-            float dishR=Math.max(dp(54),Math.min(dp(83),scene.width()*.25f));
-            float dishY=tableY-dp(3);
-            dishRect.set(dishX-dishR*1.15f,dishY-dishR*.62f,dishX+dishR*1.15f,dishY+dishR*.62f);
-            drawDish(c,dishX,dishY,dishR,idx,remaining);
-
-            if(eaten<3){
-                action.setEmpty();
-                centerText(c,"Торкнись тарілки • залишилось "+remaining,r.bottom-dp(18),7.8f,Color.rgb(88,116,128));
-            }else{
-                button(c,"ЗАВЕРШИТИ ДЕНЬ");
-            }
-        }
+        void drawDinner(Canvas c){RectF r=card();cardBase(c,r);int idx=Math.max(0,Math.min(4,schoolDone));int eaten=Math.max(0,Math.min(3,dinnerBites)),remaining=3-eaten;centerText(c,"ВЕЧЕРЯ • "+schoolOrdinal()+"/5",r.top+dp(25),7,Color.rgb(113,134,141));centerText(c,DISHES[idx],r.top+dp(62),Math.min(23,getWidth()/dp(15)),Color.rgb(48,82,99));String dinnerLine=eaten>=3?"Смачно. День майже завершено.":(idx==3?"Деруни зі сметаною «ГАЛИЧИНА» • ігрова інтеграція.":"Три короткі укуси — і відпочивати.");centerText(c,dinnerLine,r.top+dp(86),7.2f,Color.rgb(99,124,134));float sceneBottom=r.bottom-dp(eaten>=3?82:48);RectF scene=new RectF(r.left+dp(10),r.top+dp(98),r.right-dp(10),sceneBottom);LinearGradient warm=new LinearGradient(0,scene.top,0,scene.bottom,Color.rgb(255,240,210),Color.rgb(224,179,128),Shader.TileMode.CLAMP);p.setShader(warm);c.drawRoundRect(scene,dp(22),dp(22),p);p.setShader(null);p.setColor(Color.rgb(112,157,180));RectF window=new RectF(scene.left+dp(13),scene.top+dp(13),scene.left+Math.min(dp(76),scene.width()*.27f),scene.top+Math.min(dp(82),scene.height()*.34f));c.drawRoundRect(window,dp(10),dp(10),p);p.setColor(Color.rgb(239,247,250));c.drawRect(window.centerX()-dp(1),window.top,window.centerX()+dp(1),window.bottom,p);c.drawRect(window.left,window.centerY()-dp(1),window.right,window.centerY()+dp(1),p);float tableY=scene.top+scene.height()*.64f;float heroR=Math.max(dp(28),Math.min(dp(43),Math.min(scene.width()*.13f,scene.height()*.18f)));float heroX=scene.centerX()-scene.width()*.22f;drawHero(c,heroX,tableY+dp(52),heroR);p.setColor(Color.rgb(151,102,68));c.drawRoundRect(new RectF(scene.left,tableY,scene.right,scene.bottom+dp(8)),dp(8),dp(8),p);p.setColor(Color.rgb(190,137,91));c.drawRect(scene.left,tableY,scene.right,tableY+dp(10),p);float dishX=scene.centerX()+scene.width()*.18f;float dishR=Math.max(dp(54),Math.min(dp(83),scene.width()*.25f));float dishY=tableY-dp(3);dishRect.set(dishX-dishR*1.15f,dishY-dishR*.62f,dishX+dishR*1.15f,dishY+dishR*.62f);drawDish(c,dishX,dishY,dishR,idx,remaining);if(eaten<3){action.setEmpty();centerText(c,"Торкнись тарілки • залишилось "+remaining,r.bottom-dp(18),7.8f,Color.rgb(88,116,128));}else{button(c,"ЗАВЕРШИТИ ДЕНЬ");}}
 
         void drawWeekendChoice(Canvas c){RectF r=card();cardBase(c,r);centerText(c,(calendarDow==Calendar.SATURDAY?"СУБОТА":"НЕДІЛЯ")+" • ВИХІДНИЙ "+(weekendDone+1)+"/2",r.top+dp(30),7,Color.rgb(109,132,140));centerText(c,"СЬОГОДНІ — СНІГОПЛАВАННЯ",r.top+dp(70),18,Color.rgb(43,105,139));centerText(c,"Не вода: холодний сухий басейн зі сніговою крупою при -8 °C.",r.top+dp(104),7.2f,Color.rgb(99,125,136));centerText(c,"Малий не тане, а буквально «пливе» крізь пухкий сніг.",r.top+dp(130),7.2f,Color.rgb(99,125,136));drawHero(c,r.centerX()-dp(42),r.bottom-dp(40),dp(34));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(40),dp(28));button(c,"ВЕСТИ МАЛОГО НА ПЛАВАННЯ");}
         void drawWeekendMini(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"ВИХІДНИЙ • "+weekendChoice.toUpperCase(),r.top+dp(29),7,Color.rgb(109,132,140));centerText(c,"Ще трохи — і день буде прожито",r.top+dp(66),16,Color.rgb(43,105,139));centerText(c,"Влуч у рухому мітку 4 рази.",r.top+dp(95),7.4f,Color.rgb(99,125,136));movingTarget(r);drawTarget(c,miniHits>=4);centerText(c,"Прогрес "+Math.min(4,miniHits)+"/4",r.bottom-dp(108),7.2f,Color.rgb(89,122,137));drawHero(c,r.centerX()-dp(42),r.bottom-dp(38),dp(33));drawFriend(c,r.centerX()+dp(48),r.bottom-dp(38),dp(28));if(miniHits>=4)button(c,"ЗАВЕРШИТИ ВИХІДНИЙ");else{action.setEmpty();postInvalidateOnAnimation();}}
-
         void drawBonus(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"СЬОГОДНІ • "+dayName(),r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"Цей тип дня вже зараховано",r.top+dp(72),18,Color.rgb(43,105,139));String need=schoolDone<5?("Ще потрібно навчальних днів: "+(5-schoolDone)):("Ще потрібно вихідних: "+(2-weekendDone));centerText(c,need,r.top+dp(109),8,Color.rgb(99,125,136));centerText(c,"Можна зайти до спогадів або гардероба. Рік не прокручується сам.",r.top+dp(137),7,Color.rgb(99,125,136));drawHero(c,r.centerX()-dp(38),r.bottom-dp(44),dp(35));drawFriend(c,r.centerX()+dp(50),r.bottom-dp(44),dp(28));drawBottomTools(c);}
-        void drawDone(Canvas c){
-            RectF r=card();cardBase(c,r);
-            centerText(c,className()+" • ПРОЖИТО "+totalDone()+"/7",r.top+dp(27),7,Color.rgb(109,132,140));
-            centerText(c,"ДЕНЬ ПРОЖИТО",r.top+dp(66),18,Color.rgb(42,106,141));
-            String detail=isWeekday()?("Навчання "+schoolDone+"/5 • вечеря: "+prefs.getString("school_meal_last","—")):("Вихідні "+weekendDone+"/2 • "+prefs.getString("school_weekend_last","день прожито"));
-            centerText(c,detail,r.top+dp(96),7.3f,Color.rgb(95,121,133));
-
-            RectF lock=new RectF(r.left+dp(24),r.top+dp(118),r.right-dp(24),r.top+dp(184));
-            p.setColor(Color.rgb(235,245,249));c.drawRoundRect(lock,dp(19),dp(19),p);
-            centerTextAt(c,"НАСТУПНИЙ ДЕНЬ — НЕ РАНІШЕ ЗАВТРА",lock.centerX(),lock.top+dp(25),6.9f,Color.rgb(105,129,139));
-            centerTextAt(c,"Пропустиш день — прогрес залишиться "+totalDone()+"/7",lock.centerX(),lock.bottom-dp(17),7.4f,Color.rgb(50,104,134));
-
-            centerText(c,"А зараз можна просто побути разом або зайти до спогадів.",lock.bottom+dp(31),7.1f,Color.rgb(99,125,136));
-            float freeH=Math.max(dp(140),r.bottom-lock.bottom-dp(45));
-            float heroR=Math.max(dp(40),Math.min(dp(60),freeH/3.85f));
-            float friendR=heroR*.76f;
-            float ground=r.bottom-dp(26);
-            drawHero(c,r.centerX()-heroR*.68f,ground,heroR);
-            drawFriend(c,r.centerX()+heroR*.96f,ground,friendR);
-            drawBottomTools(c);
-        }
+        void drawDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,className()+" • ПРОЖИТО "+totalDone()+"/7",r.top+dp(27),7,Color.rgb(109,132,140));centerText(c,"ДЕНЬ ПРОЖИТО",r.top+dp(66),18,Color.rgb(42,106,141));String detail=isWeekday()?("Навчання "+schoolDone+"/5 • вечеря: "+prefs.getString("school_meal_last","—")):("Вихідні "+weekendDone+"/2 • "+prefs.getString("school_weekend_last","день прожито"));centerText(c,detail,r.top+dp(96),7.3f,Color.rgb(95,121,133));RectF lock=new RectF(r.left+dp(24),r.top+dp(118),r.right-dp(24),r.top+dp(184));p.setColor(Color.rgb(235,245,249));c.drawRoundRect(lock,dp(19),dp(19),p);centerTextAt(c,"НАСТУПНИЙ ДЕНЬ — НЕ РАНІШЕ ЗАВТРА",lock.centerX(),lock.top+dp(25),6.9f,Color.rgb(105,129,139));centerTextAt(c,"Пропустиш день — прогрес залишиться "+totalDone()+"/7",lock.centerX(),lock.bottom-dp(17),7.4f,Color.rgb(50,104,134));centerText(c,"А зараз можна просто побути разом або зайти до спогадів.",lock.bottom+dp(31),7.1f,Color.rgb(99,125,136));float freeH=Math.max(dp(140),r.bottom-lock.bottom-dp(45));float heroR=Math.max(dp(40),Math.min(dp(60),freeH/3.85f));float friendR=heroR*.76f;float ground=r.bottom-dp(26);drawHero(c,r.centerX()-heroR*.68f,ground,heroR);drawFriend(c,r.centerX()+heroR*.96f,ground,friendR);drawBottomTools(c);}
         void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
         void drawBottomTools(Canvas c){float w=getWidth(),bottom=getHeight()-safeBottom,gap=dp(8),half=(w-dp(48)-gap)/2f;memoryBtn.set(dp(20),bottom-dp(70),dp(20)+half,bottom-dp(13));wardrobeBtn.set(memoryBtn.right+gap,bottom-dp(70),w-dp(20),bottom-dp(13));p.setColor(Color.rgb(232,243,237));c.drawRoundRect(memoryBtn,dp(18),dp(18),p);p.setColor(Color.rgb(235,243,248));c.drawRoundRect(wardrobeBtn,dp(18),dp(18),p);centerTextAt(c,"СПОГАДИ",memoryBtn.centerX(),memoryBtn.centerY()+dp(3),7.5f,Color.rgb(58,106,91));centerTextAt(c,"ГАРДЕРОБ",wardrobeBtn.centerX(),wardrobeBtn.centerY()+dp(3),7.5f,Color.rgb(60,103,127));}
 
-        void drawDish(Canvas c,float x,float y,float r,int kind,int remaining){
-            remaining=Math.max(0,Math.min(3,remaining));
-            float f=remaining/3f;
-            p.setColor(Color.rgb(236,240,237));
-            c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);
-            stroke.setStrokeWidth(Math.max(dp(1),r*.012f));stroke.setColor(Color.argb(55,75,92,91));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),stroke);
-            if(kind==0){
-                if(remaining>0){
-                    float rw=r*(.30f+.40f*f),rh=r*(.10f+.15f*f);
-                    p.setColor(Color.rgb(160,48,43));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);
-                    if(remaining>=2){p.setColor(Color.rgb(247,245,226));c.drawCircle(x+rw*.18f,y-rh*.15f,Math.max(dp(4),r*.075f),p);}
-                }else{p.setColor(Color.argb(75,167,57,45));c.drawOval(new RectF(x-r*.20f,y-r*.05f,x+r*.20f,y+r*.05f),p);}
-            }else if(kind==1){
-                int count=remaining*2;
-                for(int i=0;i<count;i++){
-                    int row=i/3,col=i%3;float px=x+(col-1)*r*.34f+(row==1?r*.10f:0),py=y-r*.08f+row*r*.15f;
-                    p.setColor(Color.rgb(236,199,132));RectF dumpling=new RectF(px-r*.19f,py-r*.10f,px+r*.19f,py+r*.10f);c.drawOval(dumpling,p);
-                    p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(px-r*.15f,py-r*.10f,px+r*.15f,py+r*.015f),p);
-                    stroke.setColor(Color.rgb(201,162,103));stroke.setStrokeWidth(Math.max(dp(.8f),r*.01f));c.drawArc(dumpling,0,180,false,stroke);
-                }
-            }else if(kind==2){
-                int count=remaining*2;
-                for(int i=0;i<count;i++){
-                    int row=i/3,col=i%3;float px=x+(col-1)*r*.32f+(row==1?r*.08f:0),py=y-r*.08f+row*r*.17f;
-                    RectF roll=new RectF(px-r*.17f,py-r*.085f,px+r*.17f,py+r*.085f);
-                    p.setColor(Color.rgb(107,150,83));c.drawRoundRect(roll,r*.06f,r*.06f,p);
-                    stroke.setColor(Color.rgb(81,122,65));stroke.setStrokeWidth(Math.max(dp(.8f),r*.012f));c.drawLine(px-r*.09f,py-r*.055f,px+r*.09f,py+r*.055f,stroke);
-                    p.setColor(Color.argb(105,220,235,190));c.drawRoundRect(new RectF(roll.left+r*.025f,roll.top+r*.018f,roll.right-r*.025f,roll.top+r*.045f),r*.02f,r*.02f,p);
-                }
-            }else if(kind==3){
-                int count=remaining==3?4:(remaining==2?3:(remaining==1?1:0));
-                float[] ox={-.34f,.05f,.37f,-.08f};float[] oy={.04f,-.08f,.05f,.15f};float[] rot={-9f,7f,-5f,4f};
-                for(int i=0;i<count;i++){
-                    c.save();c.rotate(rot[i],x+ox[i]*r,y+oy[i]*r);
-                    RectF pancake=new RectF(x+ox[i]*r-r*.29f,y+oy[i]*r-r*.105f,x+ox[i]*r+r*.29f,y+oy[i]*r+r*.105f);
-                    p.setColor(Color.rgb(178,112,35));c.drawOval(new RectF(pancake.left-r*.018f,pancake.top-r*.012f,pancake.right+r*.018f,pancake.bottom+r*.012f),p);
-                    p.setColor(Color.rgb(232,177,71));c.drawOval(pancake,p);
-                    p.setColor(Color.argb(120,255,222,133));c.drawOval(new RectF(pancake.left+r*.055f,pancake.top+r*.025f,pancake.right-r*.075f,pancake.bottom-r*.035f),p);c.restore();
-                }
-                if(remaining>0){p.setColor(Color.rgb(249,248,240));c.drawCircle(x+r*.58f,y-r*.03f,r*.13f,p);p.setColor(Color.rgb(238,241,234));c.drawCircle(x+r*.58f,y-r*.03f,r*.085f,p);}
-            }else{
-                if(remaining>0){
-                    float rw=r*(.22f+.46f*f),rh=r*(.09f+.15f*f);
-                    p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);
-                    p.setColor(Color.rgb(250,245,223));int crumbs=remaining*2+1;for(int i=0;i<crumbs;i++){float px=x+(i-(crumbs-1)/2f)*rw*.30f;c.drawCircle(px,y-rh*.12f,Math.max(dp(2),r*.035f),p);}
-                }
-            }
-        }
+        void drawDish(Canvas c,float x,float y,float r,int kind,int remaining){remaining=Math.max(0,Math.min(3,remaining));float f=remaining/3f;p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);stroke.setStrokeWidth(Math.max(dp(1),r*.012f));stroke.setColor(Color.argb(55,75,92,91));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),stroke);if(kind==0){if(remaining>0){float rw=r*(.30f+.40f*f),rh=r*(.10f+.15f*f);p.setColor(Color.rgb(160,48,43));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);if(remaining>=2){p.setColor(Color.rgb(247,245,226));c.drawCircle(x+rw*.18f,y-rh*.15f,Math.max(dp(4),r*.075f),p);}}else{p.setColor(Color.argb(75,167,57,45));c.drawOval(new RectF(x-r*.20f,y-r*.05f,x+r*.20f,y+r*.05f),p);}}else if(kind==1){int count=remaining*2;for(int i=0;i<count;i++){int row=i/3,col=i%3;float px=x+(col-1)*r*.34f+(row==1?r*.10f:0),py=y-r*.08f+row*r*.15f;p.setColor(Color.rgb(236,199,132));RectF dumpling=new RectF(px-r*.19f,py-r*.10f,px+r*.19f,py+r*.10f);c.drawOval(dumpling,p);p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(px-r*.15f,py-r*.10f,px+r*.15f,py+r*.015f),p);stroke.setColor(Color.rgb(201,162,103));stroke.setStrokeWidth(Math.max(dp(.8f),r*.01f));c.drawArc(dumpling,0,180,false,stroke);}}else if(kind==2){int count=remaining*2;for(int i=0;i<count;i++){int row=i/3,col=i%3;float px=x+(col-1)*r*.32f+(row==1?r*.08f:0),py=y-r*.08f+row*r*.17f;RectF roll=new RectF(px-r*.17f,py-r*.085f,px+r*.17f,py+r*.085f);p.setColor(Color.rgb(107,150,83));c.drawRoundRect(roll,r*.06f,r*.06f,p);stroke.setColor(Color.rgb(81,122,65));stroke.setStrokeWidth(Math.max(dp(.8f),r*.012f));c.drawLine(px-r*.09f,py-r*.055f,px+r*.09f,py+r*.055f,stroke);p.setColor(Color.argb(105,220,235,190));c.drawRoundRect(new RectF(roll.left+r*.025f,roll.top+r*.018f,roll.right-r*.025f,roll.top+r*.045f),r*.02f,r*.02f,p);}}else if(kind==3){int count=remaining==3?4:(remaining==2?3:(remaining==1?1:0));float[] ox={-.34f,.05f,.37f,-.08f};float[] oy={.04f,-.08f,.05f,.15f};float[] rot={-9f,7f,-5f,4f};for(int i=0;i<count;i++){c.save();c.rotate(rot[i],x+ox[i]*r,y+oy[i]*r);RectF pancake=new RectF(x+ox[i]*r-r*.29f,y+oy[i]*r-r*.105f,x+ox[i]*r+r*.29f,y+oy[i]*r+r*.105f);p.setColor(Color.rgb(178,112,35));c.drawOval(new RectF(pancake.left-r*.018f,pancake.top-r*.012f,pancake.right+r*.018f,pancake.bottom+r*.012f),p);p.setColor(Color.rgb(232,177,71));c.drawOval(pancake,p);p.setColor(Color.argb(120,255,222,133));c.drawOval(new RectF(pancake.left+r*.055f,pancake.top+r*.025f,pancake.right-r*.075f,pancake.bottom-r*.035f),p);c.restore();}if(remaining>0){float cupX=x+r*.61f,cupY=y-r*.03f,cupW=r*.34f,cupH=r*.27f;RectF cup=new RectF(cupX-cupW*.50f,cupY-cupH*.55f,cupX+cupW*.50f,cupY+cupH*.55f);p.setColor(Color.rgb(252,253,249));c.drawRoundRect(cup,r*.055f,r*.055f,p);p.setColor(Color.rgb(40,96,164));c.drawRoundRect(new RectF(cup.left,cup.top,cup.right,cup.top+cupH*.28f),r*.045f,r*.045f,p);p.setColor(Color.rgb(246,249,245));c.drawOval(new RectF(cup.left-r*.015f,cup.top-r*.025f,cup.right+r*.015f,cup.top+cupH*.12f),p);text.setTextAlign(Paint.Align.CENTER);text.setColor(Color.rgb(37,91,156));text.setTextSize(Math.max(dp(4.0f),r*.050f));c.drawText("ГАЛИЧИНА",cup.centerX(),cup.centerY()+cupH*.05f,text);text.setTextSize(Math.max(dp(3.4f),r*.040f));text.setColor(Color.rgb(71,118,92));c.drawText("СМЕТАНА",cup.centerX(),cup.bottom-cupH*.13f,text);stroke.setColor(Color.rgb(87,143,101));stroke.setStrokeWidth(Math.max(dp(.8f),r*.01f));c.drawLine(cup.left+cupW*.12f,cup.bottom-cupH*.09f,cup.centerX(),cup.bottom-cupH*.18f,stroke);c.drawLine(cup.centerX(),cup.bottom-cupH*.18f,cup.right-cupW*.12f,cup.bottom-cupH*.09f,stroke);}}else{if(remaining>0){float rw=r*(.22f+.46f*f),rh=r*(.09f+.15f*f);p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-rw,y-rh,x+rw,y+rh),p);p.setColor(Color.rgb(250,245,223));int crumbs=remaining*2+1;for(int i=0;i<crumbs;i++){float px=x+(i-(crumbs-1)/2f)*rw*.30f;c.drawCircle(px,y-rh*.12f,Math.max(dp(2),r*.035f),p);}}}}
         void button(Canvas c,String label){float w=getWidth(),bottom=getHeight()-safeBottom;action.set(dp(22),bottom-dp(70),w-dp(22),bottom-dp(12));p.setColor(Color.rgb(37,108,153));c.drawRoundRect(action,dp(20),dp(20),p);centerTextAt(c,label,action.centerX(),action.centerY()+dp(4),8.8f,Color.WHITE);}
         void drawHero(Canvas c,float x,float ground,float r){drawSnowPerson(c,x,ground,r,true,false);}void drawFriend(Canvas c,float x,float ground,float r){drawSnowPerson(c,x,ground,r,false,true);}
         void drawSnowPerson(Canvas c,float x,float ground,float r,boolean hero,boolean friend){float br=r,mr=r*.72f,hr=r*.53f,by=ground-br,my=by-(br+mr)*.84f,hy=my-(mr+hr)*.84f;snow(c,x,by,br);snow(c,x,my,mr);snow(c,x,hy,hr);p.setColor(Color.rgb(44,59,68));c.drawCircle(x-hr*.28f,hy-hr*.14f,hr*.08f,p);c.drawCircle(x+hr*.28f,hy-hr*.14f,hr*.08f,p);Path n=new Path();n.moveTo(x,hy);n.lineTo(x+hr*.68f,hy+hr*.07f);n.lineTo(x,hy+hr*.14f);n.close();p.setColor(Color.rgb(241,117,34));c.drawPath(n,p);stroke.setColor(Color.rgb(105,78,57));stroke.setStrokeWidth(Math.max(dp(2.2f),r*.07f));c.drawLine(x-mr*.60f,my,x-mr*1.30f,my-mr*.25f,stroke);c.drawLine(x+mr*.60f,my,x+mr*1.30f,my-mr*.25f,stroke);if(hero)SnowmanStyle.drawFaceAccent(c,p,stroke,density,SnowmanStyle.character(prefs),x,hy,hr);else if(friend){p.setColor(Color.rgb(55,137,194));c.drawRoundRect(new RectF(x-mr*.62f,my-mr*.70f,x+mr*.62f,my-mr*.52f),dp(4),dp(4),p);}}
