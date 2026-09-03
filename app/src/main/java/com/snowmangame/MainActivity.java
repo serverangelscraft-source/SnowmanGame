@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
         boolean compact, narrow, finished, rolling, ballReady, draggingBall, sponsorScene, sponsorRewarded, coinsAwarded;
         int balls, score, bestScore, buildQuality, decorQuality, decorPlaced, combo;
         int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday, snowCondition, visitorType;
-        long rewardDay;
+        long rewardDay, challengeDay;
         long startTime, sponsorStart;
         int finishSeconds;
         boolean missionSuccess;
@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
             wallet=Math.max(0,prefs.getInt("coins",0));
             yearBuilds=Math.max(0,Math.min(3,prefs.getInt("year_builds_"+year,0)));
             syncDailyState();
+            challengeDay=rewardDay;
             snowCondition=dailySnowCondition();
             visitorType=dailyVisitor();
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
@@ -152,12 +153,12 @@ public class MainActivity extends Activity {
             }
         }
         int dailyMission(){
-            long seed=rewardDay*31L+year*17L;
+            long seed=challengeDay*31L+year*17L;
             return (int)Math.floorMod(seed,3L);
         }
-        int dailySnowCondition(){return (int)Math.floorMod(rewardDay*13L+7L,3L);}
+        int dailySnowCondition(){return (int)Math.floorMod(challengeDay*13L+7L,3L);}
         String snowName(){return snowCondition==0?"ПУХКИЙ":(snowCondition==1?"МОКРИЙ":"КРИЖАНИЙ");}
-        int dailyVisitor(){return (int)Math.floorMod(rewardDay*19L+11L,4L);}
+        int dailyVisitor(){return (int)Math.floorMod(challengeDay*19L+11L,4L);}
         String visitorName(){return visitorType==0?"МАЙСТРИНЯ":(visitorType==1?"ФОТОГРАФ":(visitorType==2?"ДИТИНА":"СУСІД"));}
         String visitorRequest(){
             if(visitorType==0)return "Гість дня: майстриня • хоче шарф і 4+ деталі";
@@ -171,11 +172,12 @@ public class MainActivity extends Activity {
             if(visitorType==2)return items[HAT].placed&&decorPlaced>=5;
             return decorPlaced==3;
         }
-        String visitorMemoryKey(){return "visitor_memory_"+rewardDay;}
+        String visitorMemoryKey(){return "visitor_memory_"+challengeDay;}
         void refreshDailyIfNeeded(){
             long now=localDayNumber();
-            if(now==rewardDay)return;
-            syncDailyState();mission=dailyMission();snowCondition=dailySnowCondition();visitorType=dailyVisitor();
+            if(now==challengeDay)return;
+            if(startTime!=0)return;
+            syncDailyState();challengeDay=rewardDay;mission=dailyMission();snowCondition=dailySnowCondition();visitorType=dailyVisitor();
             tip=visitorRequest();
         }
         String timeText(int s){return String.format("%d:%02d",s/60,s%60);}
@@ -424,10 +426,10 @@ public class MainActivity extends Activity {
             RectF card=new RectF(l,top,l+cw,top+ch);
             p.setColor(Color.argb(244,255,255,255));c.drawRoundRect(card,dp(24),dp(24),p);
             text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(126,143,151));
-            c.drawText("ДЕМО-КОЛАБ • НЕОФІЦІЙНА ІНТЕГРАЦІЯ",card.left+dp(16),card.top+dp(18),text);
+            c.drawText("ІГРОВА СЦЕНА • БЕЗ РЕАЛЬНОГО ПАРТНЕРСТВА",card.left+dp(16),card.top+dp(18),text);
             if(giftType==NOSE){
                 text.setTextSize(tx(17));text.setColor(Color.rgb(238,112,35));c.drawText("ПЕРША МОРКВИНА",card.left+dp(16),card.top+dp(47),text);
-                text.setTextSize(tx(10));text.setColor(Color.rgb(55,91,110));c.drawText("Її сніговику купила мама в «Сільпо».",card.left+dp(16),card.top+dp(72),text);
+                text.setTextSize(tx(10));text.setColor(Color.rgb(55,91,110));c.drawText("Її сніговику купила мама у крамниці.",card.left+dp(16),card.top+dp(72),text);
                 text.setTextSize(tx(8));text.setColor(Color.rgb(95,130,147));c.drawText("Тепер у нього є справжній перший ніс.",card.left+dp(16),card.top+dp(94),text);
                 float x=card.right-dp(45),y=card.centerY()+dp(4);Path n=new Path();n.moveTo(x-dp(24),y-dp(8));n.lineTo(x+dp(25),y);n.lineTo(x-dp(24),y+dp(8));n.close();p.setColor(Color.rgb(242,119,37));c.drawPath(n,p);
             }else{
@@ -579,7 +581,7 @@ public class MainActivity extends Activity {
             String rewardText=runCoins>0?("+"+runCoins+" МОНЕТ • НАГОРОДИ "+rewardedBuildsToday+"/3"):("ВІЛЬНА РОБОТА • НАГОРОДИ 3/3 • БАЛАНС "+wallet);
             c.drawText(rewardText,coin.centerX(),coin.centerY()+dp(3),text);
             RectF badge=new RectF(card.left+dp(24),card.top+dp(205),card.right-dp(24),card.top+dp(248));
-            p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(246,239,232));c.drawRoundRect(badge,dp(15),dp(15),p);text.setTextSize(tx(8));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО +250":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()+dp(3),text);
+            p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(246,239,232));c.drawRoundRect(badge,dp(15),dp(15),p);text.setTextSize(tx(8));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО • +250 БАЛІВ":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()+dp(3),text);
 
             RectF visitor=new RectF(card.left+dp(24),card.top+dp(256),card.right-dp(24),card.top+dp(292));
             boolean visitorDone=visitorSuccess();
@@ -590,7 +592,8 @@ public class MainActivity extends Activity {
             sponsorBtn.set(card.left+dp(22),card.bottom-dp(178),card.right-dp(22),card.bottom-dp(128));
             boolean yearReady=year>=7||yearBuilds>=3;
             p.setColor(yearReady?Color.rgb(231,246,238):Color.rgb(239,245,248));c.drawRoundRect(sponsorBtn,dp(18),dp(18),p);
-            text.setTextSize(tx(8.4f));text.setColor(yearReady?Color.rgb(50,126,96):Color.rgb(79,119,140));
+            text.setTextSize(tx(8.4f));text.setTextColor(Color.rgb(50,126,96));
+            text.setColor(yearReady?Color.rgb(50,126,96):Color.rgb(79,119,140));
             String yearProgress=year>=7?"ШКІЛЬНИЙ ЕТАП ВІДКРИТО":(yearReady?"3/3 • ПОДОРОЖ У НОВИЙ РІК ВІДКРИТО":"ПРОГРЕС РОКУ "+yearBuilds+"/3 • ЩЕ "+(3-yearBuilds)+" ДО ПОДОРОЖІ");
             c.drawText(yearProgress,sponsorBtn.centerX(),sponsorBtn.centerY()+dp(3),text);
 
@@ -608,7 +611,7 @@ public class MainActivity extends Activity {
             LinearGradient sky=new LinearGradient(0,0,0,bottom*.75f,Color.rgb(168,224,249),Color.rgb(232,248,255),Shader.TileMode.CLAMP);
             p.setShader(sky);c.drawRect(0,0,w,getHeight(),p);p.setShader(null);
             RectF poster=new RectF(dp(16),safeTop+dp(15),w-dp(16),safeTop+dp(132));p.setColor(Color.argb(242,255,255,255));c.drawRoundRect(poster,dp(24),dp(24),p);
-            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(112,140,154));c.drawText(year>=7?"ПЕРЕД ШКОЛОЮ • ДЕМО-ІНТЕГРАЦІЯ":"ДЕМО-ІНТЕГРАЦІЯ",poster.left+dp(16),poster.top+dp(19),text);
+            text.setTextAlign(Paint.Align.LEFT);text.setTextSize(tx(6.5f));text.setColor(Color.rgb(112,140,154));c.drawText(year>=7?"ПЕРЕД ШКОЛОЮ • ІГРОВА СЦЕНА":"ІГРОВА СЦЕНА",poster.left+dp(16),poster.top+dp(19),text);
             text.setTextSize(tx(25));text.setColor(Color.rgb(214,72,111));c.drawText("ЕСКІМОС",poster.left+dp(16),poster.top+dp(55),text);
             text.setTextSize(tx(9));text.setColor(Color.rgb(62,101,122));c.drawText("Холодне до холодного.",poster.left+dp(16),poster.top+dp(82),text);
             float cx=w*.46f,br=Math.min(w*.18f,dp(70)),mr=br*.72f,hr=br*.54f,by=bottom-dp(120)-br,my=by-(br+mr)*.84f,hy=my-(mr+hr)*.84f;
@@ -631,7 +634,7 @@ public class MainActivity extends Activity {
 
         void reset(){
             balls=0;score=0;buildQuality=0;decorQuality=0;decorPlaced=0;combo=0;finished=false;rolling=false;ballReady=false;draggingBall=false;draggingAccessory=-1;
-            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();mission=dailyMission();visitorType=dailyVisitor();giftType=-1;
+            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();challengeDay=rewardDay;mission=dailyMission();snowCondition=dailySnowCondition();visitorType=dailyVisitor();giftType=-1;
             refreshDailyIfNeeded();tip=visitorRequest();rollX=Float.NaN;rollY=Float.NaN;
             for(Accessory a:items){a.placed=false;a.quality=0;a.x=a.y=0;}
             buzz(18);invalidate();
