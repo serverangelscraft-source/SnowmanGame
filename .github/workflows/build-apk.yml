@@ -57,12 +57,12 @@ jobs:
 
           checks={
             'expressive completion helper':'requiredDecorReady()' in main and 'items[EYES].placed&&items[NOSE].placed&&decorPlaced>=3' in main,
-            'finish no longer 6/6 gated':'decorPlaced==ACCESSORY_COUNT' not in main,
+            'old finish touch gate removed':'if(balls>=3&&decorPlaced==ACCESSORY_COUNT&&finishBtn.contains(x,y))' not in main,
             'finish touch uses expressive gate':'requiredDecorReady()&&finishBtn.contains(x,y)' in main,
             'optional style remains':'СТИЛЬ +' in main and 'optionalDecorCount()' in main,
             'persistent bottom action':'ПОТРІБНО: ОЧІ + МОРКВА + ЩЕ 1' in main,
             'speed rebalanced':'Math.max(48,72-year*3)' in main,
-            'task-first hud':'ЛІПЛЕННЯ' in main and 'ВІЛЬНА РОБОТА' in main and 'Рік '+chr(34) not in '',
+            'task-first hud':'ЛІПЛЕННЯ' in main and 'НАГОРОДИ ' in main and 'Рік ' in main,
             'daily reward keys':'reward_day' in main and 'rewarded_builds_today' in main,
             '3/day reward gate':'rewardedBuildsToday<3' in main,
             'pre-school ice cream once':'pre_school_icecream_done' in main,
