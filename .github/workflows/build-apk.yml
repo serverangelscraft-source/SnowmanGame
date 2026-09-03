@@ -24,14 +24,16 @@ jobs:
           curl -fL --retry 8 --retry-all-errors --connect-timeout 30 https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
-      - name: Validate canonical v18.18 source tree
+      - name: Validate v18.18 baseline and post-baseline UI fixes
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           main=Path('app/src/main/java/com/snowmangame/MainActivity.java').read_text(encoding='utf-8')
+          school=Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java').read_text(encoding='utf-8')
           gradle=Path('app/build.gradle').read_text(encoding='utf-8')
           plan=Path('docs/PLAYER_RETURN_PLAN.md').read_text(encoding='utf-8')
+          dinner_spec=Path('docs/DINNER_SCENE_REWORK.md').read_text(encoding='utf-8')
           checks={
             'challenge snapshot field':'long rewardDay, challengeDay;' in main,
             'active run freezes daily context':'if(startTime!=0)return;' in main,
@@ -45,13 +47,18 @@ jobs:
             'real retailer removed':'Сільпо' not in main,
             'fictional integration explicit':'БЕЗ РЕАЛЬНОГО ПАРТНЕРСТВА' in main,
             'school intact':'pre_school_icecream_done' in main,
-            'plan v18.18':'Current Android build: v18.18' in plan and 'challengeDay' in plan,
+            'deruny old pellets removed':'c.drawCircle(x+i*r*.34f,y,r*.22f,p)' not in school,
+            'deruny flat stack present':'float[] ox={-.34f,.05f,.37f,-.08f};' in school and 'c.drawOval(pancake,p);' in school,
+            'deruny sour cream present':'x+r*.58f,y-r*.03f,r*.13f' in school,
+            'dinner rework spec exists':'3 meaningful bites' in dinner_spec and 'dinnerBites >= 3' in dinner_spec,
+            'plan baseline':'Current Android baseline: v18.18' in plan and 'active challenge snapshot' in plan,
+            'plan tracks dinner P1':'P1 — dinner is still a weak game scene' in plan,
             'versionCode 51':re.search(r'versionCode\s+51\b',gradle) is not None,
             'versionName 18.18':'versionName "18.18"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.18 checks failed: '+'; '.join(failed))
-          print('Canonical v18.18 source tree OK')
+          if failed: raise SystemExit('source-tree checks failed: '+'; '.join(failed))
+          print('v18.18 baseline + dinner visual hotfix source tree OK')
           PY
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
