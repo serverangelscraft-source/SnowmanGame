@@ -1,7 +1,7 @@
 # SnowmanGame — player return / mobile loop plan
 
 Updated: 2026-09-03
-Current Android build: v18.16
+Current Android build: v18.17
 
 ## Current state
 - Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one daily mission, receive coins on up to 3 rewarded builds per local calendar date.
@@ -58,7 +58,7 @@ Current Android build: v18.16
 
 ### DONE v18.16 — daily curiosity visitor
 - One deterministic visitor per local calendar day asks for a compact style goal: майстриня / фотограф / дитина / сусід.
-- Replay cannot reroll the visitor because it derives from the same local-day state as mission/snow.
+- Replay and same-day year progression cannot reroll the visitor because it derives from local calendar date only.
 - Fulfilling the request stores only a date-keyed memory marker; it awards no coins and never gates progression.
 - The request uses the existing opening tip; the result uses a small block inside the existing result card, so no new menu is added.
 
@@ -121,3 +121,8 @@ The v18.15 daily-snow milestone is achieved. The next working milestone should b
 - Kept the request in the existing tip and result card to protect phone screen space.
 - Next priority is compact-phone regression and deciding whether saved memories deserve a tiny scrapbook surface.
 - Fresh business inspiration: late-August Ukrainian campaigns increasingly combine several makers/brands around one shared theme; the safe game translation is rotating fictional winter visitors with distinct craft requests, not logos or claimed partnerships.
+
+## Cycle update — 2026-09-03 visitor stability hotfix
+- Found and fixed a same-day reroll edge case: v18.16 visitor selection also depended on life year.
+- Visitor selection now depends on local calendar date only, matching the one-visitor-per-day rule and date-keyed memory.
+- This keeps year progression, replay and free sculpting from changing today's visitor.

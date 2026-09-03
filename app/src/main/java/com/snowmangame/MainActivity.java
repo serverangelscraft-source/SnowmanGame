@@ -157,7 +157,7 @@ public class MainActivity extends Activity {
         }
         int dailySnowCondition(){return (int)Math.floorMod(rewardDay*13L+7L,3L);}
         String snowName(){return snowCondition==0?"ПУХКИЙ":(snowCondition==1?"МОКРИЙ":"КРИЖАНИЙ");}
-        int dailyVisitor(){return (int)Math.floorMod(rewardDay*19L+year*11L,4L);}
+        int dailyVisitor(){return (int)Math.floorMod(rewardDay*19L+11L,4L);}
         String visitorName(){return visitorType==0?"МАЙСТРИНЯ":(visitorType==1?"ФОТОГРАФ":(visitorType==2?"ДИТИНА":"СУСІД"));}
         String visitorRequest(){
             if(visitorType==0)return "Гість дня: майстриня • хоче шарф і 4+ деталі";
