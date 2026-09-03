@@ -197,7 +197,34 @@ public class SchoolWeekActivity extends Activity {
         void drawYearDone(Canvas c){RectF r=card();cardBase(c,r);centerText(c,"5 НАВЧАЛЬНИХ • 2 ВИХІДНІ",r.top+dp(31),7,Color.rgb(109,132,140));centerText(c,"РІК "+className()+" ПРОЖИТО",r.top+dp(78),22,Color.rgb(42,106,141));centerText(c,"Він минув через твої 7 взаємодій, а не просто через календар.",r.top+dp(116),7.5f,Color.rgb(95,121,133));centerText(c,grade>=11?"Шкільний шлях завершено. Спогади й гардероб залишаються доступними.":"Наступна зима відкриється, коли ти повернешся іншого дня.",r.top+dp(142),7.2f,Color.rgb(95,121,133));drawHero(c,r.centerX()-dp(35),r.bottom-dp(43),dp(38));drawFriend(c,r.centerX()+dp(52),r.bottom-dp(43),dp(29));drawBottomTools(c);}
         void drawBottomTools(Canvas c){float w=getWidth(),bottom=getHeight()-safeBottom,gap=dp(8),half=(w-dp(48)-gap)/2f;memoryBtn.set(dp(20),bottom-dp(70),dp(20)+half,bottom-dp(13));wardrobeBtn.set(memoryBtn.right+gap,bottom-dp(70),w-dp(20),bottom-dp(13));p.setColor(Color.rgb(232,243,237));c.drawRoundRect(memoryBtn,dp(18),dp(18),p);p.setColor(Color.rgb(235,243,248));c.drawRoundRect(wardrobeBtn,dp(18),dp(18),p);centerTextAt(c,"СПОГАДИ",memoryBtn.centerX(),memoryBtn.centerY()+dp(3),7.5f,Color.rgb(58,106,91));centerTextAt(c,"ГАРДЕРОБ",wardrobeBtn.centerX(),wardrobeBtn.centerY()+dp(3),7.5f,Color.rgb(60,103,127));}
 
-        void drawDish(Canvas c,float x,float y,float r,int kind){p.setColor(Color.rgb(236,240,237));c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);if(kind==0){p.setColor(Color.rgb(167,57,45));c.drawOval(new RectF(x-r*.70f,y-r*.27f,x+r*.70f,y+r*.25f),p);p.setColor(Color.rgb(247,245,226));c.drawCircle(x+r*.18f,y-r*.05f,r*.12f,p);}else if(kind==1){p.setColor(Color.rgb(238,205,145));for(int i=-1;i<=1;i++)c.drawOval(new RectF(x+i*r*.38f-r*.24f,y-r*.12f,x+i*r*.38f+r*.24f,y+r*.17f),p);}else if(kind==2){p.setColor(Color.rgb(112,152,88));for(int i=-1;i<=1;i++)c.drawRoundRect(new RectF(x+i*r*.35f-r*.20f,y-r*.15f,x+i*r*.35f+r*.20f,y+r*.16f),r*.08f,r*.08f,p);}else if(kind==3){p.setColor(Color.rgb(210,155,63));for(int i=-1;i<=1;i++)c.drawCircle(x+i*r*.34f,y,r*.22f,p);}else{p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-r*.68f,y-r*.25f,x+r*.68f,y+r*.24f),p);p.setColor(Color.rgb(250,245,223));for(int i=-2;i<=2;i++)c.drawCircle(x+i*r*.20f,y-r*.03f,r*.055f,p);}}
+        void drawDish(Canvas c,float x,float y,float r,int kind){
+            p.setColor(Color.rgb(236,240,237));
+            c.drawOval(new RectF(x-r,y-r*.42f,x+r,y+r*.42f),p);
+            if(kind==0){
+                p.setColor(Color.rgb(167,57,45));c.drawOval(new RectF(x-r*.70f,y-r*.27f,x+r*.70f,y+r*.25f),p);p.setColor(Color.rgb(247,245,226));c.drawCircle(x+r*.18f,y-r*.05f,r*.12f,p);
+            }else if(kind==1){
+                p.setColor(Color.rgb(238,205,145));for(int i=-1;i<=1;i++)c.drawOval(new RectF(x+i*r*.38f-r*.24f,y-r*.12f,x+i*r*.38f+r*.24f,y+r*.17f),p);
+            }else if(kind==2){
+                p.setColor(Color.rgb(112,152,88));for(int i=-1;i<=1;i++)c.drawRoundRect(new RectF(x+i*r*.35f-r*.20f,y-r*.15f,x+i*r*.35f+r*.20f,y+r*.16f),r*.08f,r*.08f,p);
+            }else if(kind==3){
+                float[] ox={-.34f,.05f,.37f,-.08f};
+                float[] oy={.04f,-.08f,.05f,.15f};
+                float[] rot={-9f,7f,-5f,4f};
+                for(int i=0;i<4;i++){
+                    c.save();
+                    c.rotate(rot[i],x+ox[i]*r,y+oy[i]*r);
+                    RectF pancake=new RectF(x+ox[i]*r-r*.29f,y+oy[i]*r-r*.105f,x+ox[i]*r+r*.29f,y+oy[i]*r+r*.105f);
+                    p.setColor(Color.rgb(178,112,35));c.drawOval(new RectF(pancake.left-r*.018f,pancake.top-r*.012f,pancake.right+r*.018f,pancake.bottom+r*.012f),p);
+                    p.setColor(Color.rgb(232,177,71));c.drawOval(pancake,p);
+                    p.setColor(Color.argb(120,255,222,133));c.drawOval(new RectF(pancake.left+r*.055f,pancake.top+r*.025f,pancake.right-r*.075f,pancake.bottom-r*.035f),p);
+                    c.restore();
+                }
+                p.setColor(Color.rgb(249,248,240));c.drawCircle(x+r*.58f,y-r*.03f,r*.13f,p);
+                p.setColor(Color.rgb(238,241,234));c.drawCircle(x+r*.58f,y-r*.03f,r*.085f,p);
+            }else{
+                p.setColor(Color.rgb(238,195,62));c.drawOval(new RectF(x-r*.68f,y-r*.25f,x+r*.68f,y+r*.24f),p);p.setColor(Color.rgb(250,245,223));for(int i=-2;i<=2;i++)c.drawCircle(x+i*r*.20f,y-r*.03f,r*.055f,p);
+            }
+        }
         void button(Canvas c,String label){float w=getWidth(),bottom=getHeight()-safeBottom;action.set(dp(22),bottom-dp(70),w-dp(22),bottom-dp(12));p.setColor(Color.rgb(37,108,153));c.drawRoundRect(action,dp(20),dp(20),p);centerTextAt(c,label,action.centerX(),action.centerY()+dp(4),8.8f,Color.WHITE);}
         void drawHero(Canvas c,float x,float ground,float r){drawSnowPerson(c,x,ground,r,true,false);}void drawFriend(Canvas c,float x,float ground,float r){drawSnowPerson(c,x,ground,r,false,true);}
         void drawSnowPerson(Canvas c,float x,float ground,float r,boolean hero,boolean friend){float br=r,mr=r*.72f,hr=r*.53f,by=ground-br,my=by-(br+mr)*.84f,hy=my-(mr+hr)*.84f;snow(c,x,by,br);snow(c,x,my,mr);snow(c,x,hy,hr);p.setColor(Color.rgb(44,59,68));c.drawCircle(x-hr*.28f,hy-hr*.14f,hr*.08f,p);c.drawCircle(x+hr*.28f,hy-hr*.14f,hr*.08f,p);Path n=new Path();n.moveTo(x,hy);n.lineTo(x+hr*.68f,hy+hr*.07f);n.lineTo(x,hy+hr*.14f);n.close();p.setColor(Color.rgb(241,117,34));c.drawPath(n,p);stroke.setColor(Color.rgb(105,78,57));stroke.setStrokeWidth(Math.max(dp(2.2f),r*.07f));c.drawLine(x-mr*.60f,my,x-mr*1.30f,my-mr*.25f,stroke);c.drawLine(x+mr*.60f,my,x+mr*1.30f,my-mr*.25f,stroke);if(hero)SnowmanStyle.drawFaceAccent(c,p,stroke,density,SnowmanStyle.character(prefs),x,hy,hr);else if(friend){p.setColor(Color.rgb(55,137,194));c.drawRoundRect(new RectF(x-mr*.62f,my-mr*.70f,x+mr*.62f,my-mr*.52f),dp(4),dp(4),p);}}
