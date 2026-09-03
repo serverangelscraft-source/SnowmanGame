@@ -592,8 +592,7 @@ public class MainActivity extends Activity {
             sponsorBtn.set(card.left+dp(22),card.bottom-dp(178),card.right-dp(22),card.bottom-dp(128));
             boolean yearReady=year>=7||yearBuilds>=3;
             p.setColor(yearReady?Color.rgb(231,246,238):Color.rgb(239,245,248));c.drawRoundRect(sponsorBtn,dp(18),dp(18),p);
-            text.setTextSize(tx(8.4f));text.setTextColor(Color.rgb(50,126,96));
-            text.setColor(yearReady?Color.rgb(50,126,96):Color.rgb(79,119,140));
+            text.setTextSize(tx(8.4f));text.setColor(yearReady?Color.rgb(50,126,96):Color.rgb(79,119,140));
             String yearProgress=year>=7?"ШКІЛЬНИЙ ЕТАП ВІДКРИТО":(yearReady?"3/3 • ПОДОРОЖ У НОВИЙ РІК ВІДКРИТО":"ПРОГРЕС РОКУ "+yearBuilds+"/3 • ЩЕ "+(3-yearBuilds)+" ДО ПОДОРОЖІ");
             c.drawText(yearProgress,sponsorBtn.centerX(),sponsorBtn.centerY()+dp(3),text);
 
@@ -622,10 +621,10 @@ public class MainActivity extends Activity {
             drawIceCream(c,ix,iy,Math.max(.30f,1-.70f*eat));
             stroke.setColor(Color.rgb(105,78,56));stroke.setStrokeWidth(dp(3));c.drawLine(cx+mr*.62f,my,ix,iy+dp(20),stroke);
             if(t>3.8f&&!sponsorRewarded){sponsorRewarded=true;score+=150;if(score>bestScore){bestScore=score;prefs.edit().putInt("best_score",bestScore).apply();}buzz(40);}
-            if(t>3.7f){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(15));text.setColor(Color.rgb(42,93,121));c.drawText("Холодне до холодного! +150",w/2,safeTop+dp(168),text);}
+            if(t>3.7f){text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(15));text.setColor(Color.rgb(42,93,121));c.drawText("Холодне до холодного! +150 БАЛІВ",w/2,safeTop+dp(168),text);}
             if(t>4.8f){
                 float bw=Math.min(w-dp(38),dp(338)),bh=dp(54),l=(w-bw)/2,top=bottom-dp(70);sponsorCloseBtn.set(l,top,l+bw,top+bh);
-                p.setColor(Color.rgb(38,105,145));c.drawRoundRect(sponsorCloseBtn,dp(18),dp(18),p);text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText(year>=7?"ДО ШКОЛИ":"ПОВЕРНУТИСЯ ДО РЕЗУЛЬТАТУ",sponsorCloseBtn.centerX(),sponsorCloseBtn.centerY()+dp(4),text);
+                p.setColor(Color.rgb(38,105,145));c.drawRoundRect(sponsorCloseBtn,dp(18),dp(18),p);text.setTextSize(tx(9.5f));text.setColor(Color.WHITE);c.drawText(year>=7?"ДО ШКІЛИ":"ПОВЕРНУТИСЯ ДО РЕЗУЛЬТАТУ",sponsorCloseBtn.centerX(),sponsorCloseBtn.centerY()+dp(4),text);
             }
         }
         void drawIceCream(Canvas c,float x,float y,float scale){
