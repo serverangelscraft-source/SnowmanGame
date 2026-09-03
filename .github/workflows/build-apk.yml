@@ -31,10 +31,10 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Apply v18.15 daily snow
-        run: python scripts/apply_v18_15_daily_snow.py
+      - name: Apply v18.16 daily visitor
+        run: python scripts/apply_v18_16_daily_visitor.py
 
-      - name: Validate canonical v18.15 source tree
+      - name: Validate canonical v18.16 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -56,37 +56,37 @@ jobs:
           if set(sources)!=registered: raise SystemExit('Activity source/manifest mismatch')
 
           checks={
-            'daily snow field':'snowCondition' in main,
-            'daily snow names':'ПУХКИЙ' in main and 'МОКРИЙ' in main and 'КРИЖАНИЙ' in main,
-            'snow affects rolling':'snowCondition==0?.90f' in main and 'snowCondition==1?1.12f' in main,
-            'snow affects placement':'snowCondition==0?1.06f' in main and 'snowCondition==2?.90f' in main,
-            'snow compact hud':'СНІГ: ' in main,
-            'midnight refresh':'refreshDailyIfNeeded()' in main and 'if(now==rewardDay)return' in main,
+            'daily visitor deterministic':'dailyVisitor()' in main and 'rewardDay*19L+year*11L' in main,
+            'four visitor types':'МАЙСТРИНЯ' in main and 'ФОТОГРАФ' in main and 'ДИТИНА' in main and 'СУСІД' in main,
+            'visitor request opening':'tip=visitorRequest()' in main,
+            'visitor memory date keyed':'visitorMemoryKey()' in main and 'visitor_memory_' in main,
+            'visitor no extra currency':'visitorSuccess()&&!prefs.getBoolean(visitorMemoryKey(),false)' in main,
+            'visitor result compact':'СПОГАД ДНЯ' in main and 'ГІСТЬ ДНЯ' in main,
+            'daily snow intact':'dailySnowCondition()' in main and 'СНІГ: ' in main,
             'daily mission intact':'dailyMission()' in main,
             '3/day reward intact':'rewardedBuildsToday<3' in main,
             'expressive completion intact':'requiredDecorReady()' in main,
             'pre-school ice cream once':'pre_school_icecream_done' in main,
-            'year transition explicit':'confirmYearAdvance()' in journey,
-            'school DONE compact':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
-            'plan advanced':'DONE v18.15 — daily snow feel + midnight refresh' in plan,
-            'versionCode 48':re.search(r'versionCode\s+48\b',gradle) is not None,
-            'versionName 18.15':'versionName "18.15"' in gradle,
+            'school route intact':'SchoolActivity.class' in main,
+            'plan advanced':'DONE v18.16 — daily curiosity visitor' in plan,
+            'versionCode 49':re.search(r'versionCode\s+49\b',gradle) is not None,
+            'versionName 18.16':'versionName "18.16"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.15 checks failed: '+'; '.join(failed))
-          print('Canonical v18.15 source tree OK')
+          if failed: raise SystemExit('v18.16 checks failed: '+'; '.join(failed))
+          print('Canonical v18.16 source tree OK')
           PY
 
-      - name: Persist v18.15 canonical sources
+      - name: Persist v18.16 canonical sources
         if: github.event_name == 'push'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java docs/PLAYER_RETURN_PLAN.md
           if git diff --cached --quiet; then
-            echo 'v18.15 sources already canonical'
+            echo 'v18.16 sources already canonical'
           else
-            git commit -m 'Normalize v18.15 daily snow and midnight refresh'
+            git commit -m 'Normalize v18.16 daily visitor and memory loop'
             git push
           fi
 
