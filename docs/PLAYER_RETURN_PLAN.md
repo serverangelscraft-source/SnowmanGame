@@ -1,7 +1,7 @@
 # SnowmanGame — player return / mobile loop plan
 
-Updated: 2026-09-02
-Current Android build: v18.13
+Updated: 2026-09-03
+Current Android build: v18.14
 
 ## Current state
 - Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one daily mission, receive coins on up to 3 rewarded builds per local calendar date.
@@ -14,8 +14,8 @@ Current Android build: v18.13
 1. **Daily reward farming — fixed in v18.13.** Android stores `reward_day` + `rewarded_builds_today`; only the first 3 completed builds of the local calendar date award coins/progression.
 2. **Prototype daily counter is still not actually daily.** `snowman_completed_today` is stored without a date key/reset, so the HTML prototype can remain exhausted on following days. Do not port this bug back into Android.
 3. **Mission reroll — fixed in v18.13.** Mission is deterministic for local calendar day + year and stays unchanged through replays.
-4. **Completion still requires all 6 accessories.** This makes every run structurally similar and reduces expressive builds; speed missions also become partly artificial.
-5. **Top HUD still prioritizes year/coins.** It should emphasize the current tactile task and today's special condition instead.
+4. **Forced 6/6 completion — fixed in v18.14.** Eyes + carrot + any third part unlock completion; the remaining parts stay optional and add style/score.
+5. **Task-first HUD — improved in v18.14.** Current tactile step and daily reward/free status are primary; year/wallet are secondary. Daily snow condition is still missing.
 6. **Build source mutation — fixed in v18.12.** Dinner UI is canonical in source; Gradle no longer patches Java before compilation.
 
 ## Direction to keep
@@ -40,18 +40,14 @@ Current Android build: v18.13
 - One deterministic mission for local calendar day + year.
 - Replays on the same date keep the same mission.
 
+### DONE v18.14 — expressive completion + mobile action hierarchy
+- Eyes + carrot + any third accessory unlock the finish action.
+- Remaining accessories stay visible and optional; each still adds score/character.
+- The finish button has a reserved bottom touch area instead of replacing the accessory tray.
+- Speed mission target is rebalanced for fewer mandatory interactions.
+- HUD prioritizes current sculpting step and today's 3-reward/free-work status; year/wallet are secondary.
+
 ## Next implementation priorities
-### P1 — expressive completion
-- Replace forced 6/6 completion with a minimum meaningful set: target 3 required parts, remaining parts optional.
-- Optional decoration should improve style/character score rather than block completion.
-- Keep placement hints for eyes/nose but allow intentionally odd snowmen.
-- Rebalance speed mission after the mandatory interaction count is reduced.
-
-### P1 — phone UI
-- During sculpting show only current step, short tactile hint, and contextual action.
-- Move wallet/year metadata to a secondary strip or result screen.
-- Keep all bottom controls above gesture navigation and comfortably reachable one-handed.
-
 ### P2 — daily snow condition
 - Add one date-stable condition: `ПУХКИЙ`, `МОКРИЙ`, or `КРИЖАНИЙ`.
 - Condition changes actual feel slightly: rolling effort / placement tolerance, never making a run impossible.
@@ -80,12 +76,12 @@ Aurora introduced RORI on 31 August 2026 as a curious explorer character used ac
 - Reintroducing random mission rerolls or elapsed-24h daily timers.
 
 ## Definition of next working state
-The v18.13 reward-loop milestone is achieved. The next working milestone should be considered ready when:
-1. a player may finish a valid snowman with 3 meaningful required parts;
-2. optional parts improve character/style rather than gate completion;
-3. a date-stable snow condition visibly and mechanically changes the run;
-4. the main phone play screen remains uncluttered and one-handed;
-5. daily reward/free-mode rules from v18.13 remain intact.
+The v18.14 expressive-completion milestone is achieved. The next working milestone should be considered ready when:
+1. a date-stable snow condition visibly and mechanically changes the run;
+2. the condition is communicated without another large HUD panel;
+3. one optional daily curiosity/client card adds variety without another farmable currency;
+4. daily reward/free-mode rules from v18.13 remain intact;
+5. school and pre-school story routing remain unaffected.
 
 ## Cycle update — 2026-09-02 late evening
 - Closed unlimited Android coin/progression farming with a local-date 3/day quota.
@@ -94,3 +90,11 @@ The v18.13 reward-loop milestone is achieved. The next working milestone should 
 - Kept the pre-school ice-cream story exactly before school and nowhere in the school loop.
 - Corrected stale plan entries that still described old random missions and Gradle source mutation.
 - Next P1 is expressive completion; next P2 is daily snow feel + curiosity visitor.
+
+## Cycle update — 2026-09-03 early cycle
+- Closed the forced 6/6 accessory gate without removing optional decoration.
+- Preserved all six accessories and their score value, but made completion expressive after three meaningful parts.
+- Reserved a one-handed bottom finish action and simplified the HUD hierarchy.
+- Rebalanced the speed mission to avoid becoming trivial after fewer mandatory actions.
+- Next P2 is date-stable snow feel; after that, add one optional daily curiosity/client card.
+- Fresh business inspiration: the August 2026 multi-brand “Покоління 91” collaboration suggests a safe non-branded “майстерня чотирьох майстрів” cosmetic-memory week: different fictional makers contribute scarf/hat/button styles, with no logos, purchases or claims of partnership.

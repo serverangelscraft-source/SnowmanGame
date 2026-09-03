@@ -107,6 +107,8 @@ public class MainActivity extends Activity {
         void ensureTimer(){if(startTime==0)startTime=SystemClock.elapsedRealtime();}
         int avgBuild(){return balls==0?0:buildQuality/balls;}
         int avgDecor(){return decorPlaced==0?0:decorQuality/decorPlaced;}
+        boolean requiredDecorReady(){return items[EYES].placed&&items[NOSE].placed&&decorPlaced>=3;}
+        int optionalDecorCount(){return Math.max(0,decorPlaced-3);}
         int yearGoal(){return 1100+(year-1)*320;}
         float effort(){return 1f+(year-1)*.20f;}
         String ageName(){
@@ -121,7 +123,7 @@ public class MainActivity extends Activity {
             }
         }
         String missionText(){
-            int acc=Math.min(94,84+year),sec=Math.max(58,94-year*4);
+            int acc=Math.min(94,84+year),sec=Math.max(48,72-year*3);
             if(mission==0)return "МІСІЯ: точність куль ≥ "+acc+"%";
             if(mission==1)return "МІСІЯ: завершити ≤ "+sec+" с";
             return "МІСІЯ: декор ≥ "+acc+"%";
@@ -184,7 +186,7 @@ public class MainActivity extends Activity {
             float m=narrow?dp(9):dp(13);
             float hudH=compact?dp(60):dp(66);
             float tipH=compact?dp(44):dp(48);
-            float interactionH=balls<3?(compact?dp(112):dp(132)):(compact?dp(136):dp(158));
+            float interactionH=balls<3?(compact?dp(112):dp(132)):(compact?dp(190):dp(214));
             hud.set(m,safeTop+dp(8),w-m,safeTop+dp(8)+hudH);
             tipCard.set(m,hud.bottom+dp(7),w-m,hud.bottom+dp(7)+tipH);
             interaction.set(m,bottom-interactionH-dp(8),w-m,bottom-dp(8));
@@ -218,15 +220,16 @@ public class MainActivity extends Activity {
         void target(int type,float x,float y){items[type].targetX=x;items[type].targetY=y;}
         void layoutSlots(){
             if(balls<3)return;
-            float gap=dp(6),pad=dp(8);
+            float gap=dp(6),pad=dp(8),buttonH=dp(48);
             float sw=(interaction.width()-pad*2-gap*2)/3f;
-            float sh=(interaction.height()-pad*2-gap)/2f;
+            float slotsBottom=interaction.bottom-pad-buttonH-gap;
+            float sh=(slotsBottom-(interaction.top+pad)-gap)/2f;
             for(int i=0;i<ACCESSORY_COUNT;i++){
                 int row=i/3,col=i%3;
                 float l=interaction.left+pad+col*(sw+gap),t=interaction.top+pad+row*(sh+gap);
                 items[i].slot.set(l,t,l+sw,t+sh);
             }
-            finishBtn.set(interaction.left+dp(28),interaction.top+dp(22),interaction.right-dp(28),interaction.bottom-dp(22));
+            finishBtn.set(interaction.left+pad,slotsBottom+gap,interaction.right-pad,interaction.bottom-pad);
         }
         float rollingRadius(){
             float max=Math.min(targetR*.72f,interaction.height()*.36f);
@@ -263,13 +266,13 @@ public class MainActivity extends Activity {
         void drawHud(Canvas c){
             p.setColor(Color.argb(245,255,255,255));c.drawRoundRect(hud,dp(21),dp(21),p);
             text.setTextAlign(Paint.Align.LEFT);text.setColor(Color.rgb(83,116,134));text.setTextSize(tx(narrow?6.8f:7.6f));
-            c.drawText("РІК "+year+" • "+ageName(),hud.left+dp(14),hud.top+dp(18),text);
+            c.drawText(balls<3?"ЛІПЛЕННЯ":"ОФОРМЛЕННЯ",hud.left+dp(14),hud.top+dp(18),text);
             text.setTextSize(tx(narrow?14:16));text.setColor(Color.rgb(38,69,89));
-            c.drawText(balls<3?"КУЛЯ "+(balls+1)+"/3":"ДЕКОР "+decorPlaced+"/6",hud.left+dp(14),hud.bottom-dp(13),text);
-            text.setTextAlign(Paint.Align.RIGHT);text.setTextSize(tx(narrow?10:11));text.setColor(Color.rgb(34,104,146));
-            c.drawText("● "+wallet,hud.right-dp(14),hud.top+dp(25),text);
-            text.setTextSize(tx(6.6f));text.setColor(Color.rgb(108,139,154));
-            c.drawText("монети",hud.right-dp(14),hud.bottom-dp(11),text);
+            c.drawText(balls<3?"КУЛЯ "+(balls+1)+"/3":"ДЕТАЛІ "+decorPlaced+"/6",hud.left+dp(14),hud.bottom-dp(13),text);
+            text.setTextAlign(Paint.Align.RIGHT);text.setTextSize(tx(narrow?7.4f:8.4f));text.setColor(Color.rgb(34,104,146));
+            c.drawText(rewardedBuildsToday<3?("НАГОРОДИ "+rewardedBuildsToday+"/3"):"ВІЛЬНА РОБОТА",hud.right-dp(14),hud.top+dp(22),text);
+            text.setTextSize(tx(6.4f));text.setColor(Color.rgb(108,139,154));
+            c.drawText("Рік "+year+" • ● "+wallet,hud.right-dp(14),hud.bottom-dp(11),text);
         }
 
         void drawTip(Canvas c){
@@ -341,6 +344,11 @@ public class MainActivity extends Activity {
                 if(a.type==ARMS)label="ПАЛКА ЧОТКО";
                 c.drawText(label,a.slot.centerX(),a.slot.bottom-dp(7),text);
             }
+            boolean ready=requiredDecorReady();
+            p.setColor(ready?Color.rgb(38,105,145):Color.rgb(228,238,244));c.drawRoundRect(finishBtn,dp(17),dp(17),p);
+            text.setTextAlign(Paint.Align.CENTER);text.setTextSize(tx(ready?9.6f:7.3f));text.setColor(ready?Color.WHITE:Color.rgb(91,126,143));
+            String finishLabel=ready?(optionalDecorCount()>0?("ЗАВЕРШИТИ • СТИЛЬ +"+optionalDecorCount()):"ЗАВЕРШИТИ СНІГОВИКА"):("ПОТРІБНО: ОЧІ + МОРКВА + ЩЕ 1");
+            c.drawText(finishLabel,finishBtn.centerX(),finishBtn.centerY()+dp(3),text);
         }
 
         void drawTrayIcon(Canvas c,int type,float x,float y,float s){
@@ -462,7 +470,7 @@ public class MainActivity extends Activity {
                 if(draggingBall){draggingBall=false;tryPlaceBall();return true;}
                 rolling=false;
                 if(draggingAccessory>=0){int type=draggingAccessory;draggingAccessory=-1;tryPlaceAccessory(type,x,y);return true;}
-                if(balls>=3&&decorPlaced==ACCESSORY_COUNT&&finishBtn.contains(x,y)){finishGame();return true;}
+                if(balls>=3&&requiredDecorReady()&&finishBtn.contains(x,y)){finishGame();return true;}
             }
             return true;
         }
@@ -494,8 +502,9 @@ public class MainActivity extends Activity {
                 buzz(q>=70?24:14);
                 if(type==NOSE)showGift(NOSE);
                 if(type==ARMS)showGift(ARMS);
-                if(decorPlaced>=ACCESSORY_COUNT)tip="Декор готовий — заверши сніговика";
-                else if(d<=tol)tip=a.name+": "+q+"%. Наступна деталь";
+                if(decorPlaced>=ACCESSORY_COUNT)tip="Усі деталі на місці — можна завершувати";
+                else if(requiredDecorReady())tip="Можна завершити або додати ще деталей для стилю";
+                else if(d<=tol)tip=a.name+": "+q+"%. Потрібні очі, морква і ще одна деталь";
                 else tip=a.name+" кривенько — зате з характером";
             }else{
                 combo=0;tip="Це вже повз сніговика — спробуй ближче";buzz(12);
@@ -506,7 +515,7 @@ public class MainActivity extends Activity {
         void finishGame(){
             ensureTimer();finishSeconds=elapsed();
             score+=Math.max(0,180-finishSeconds*2);
-            int acc=Math.min(94,84+year),sec=Math.max(58,94-year*4);
+            int acc=Math.min(94,84+year),sec=Math.max(48,72-year*3);
             missionSuccess=mission==0?avgBuild()>=acc:mission==1?finishSeconds<=sec:avgDecor()>=acc;
             if(missionSuccess)score+=250;
             finished=true;
