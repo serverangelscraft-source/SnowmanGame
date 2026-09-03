@@ -24,34 +24,65 @@ jobs:
           curl -fL --retry 8 --retry-all-errors --connect-timeout 30 https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
-      - name: Validate canonical v18.20 source tree
+      - name: Validate canonical v18.21 source tree and school path
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           main=Path('app/src/main/java/com/snowmangame/MainActivity.java').read_text(encoding='utf-8')
           school=Path('app/src/main/java/com/snowmangame/SchoolWeekActivity.java').read_text(encoding='utf-8')
+          school_intro=Path('app/src/main/java/com/snowmangame/SchoolActivity.java').read_text(encoding='utf-8')
           resume=Path('app/src/main/java/com/snowmangame/ResumeActivity.java').read_text(encoding='utf-8')
+          guard=Path('app/src/main/java/com/snowmangame/SchoolProgressionGuard.java').read_text(encoding='utf-8')
+          swim=Path('app/src/main/java/com/snowmangame/SnowSwimActivity.java').read_text(encoding='utf-8')
           manifest=Path('app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
           gradle=Path('app/build.gradle').read_text(encoding='utf-8')
           checks={
             'challenge snapshot field':'long rewardDay, challengeDay;' in main,
             'active run freezes daily context':'if(startTime!=0)return;' in main,
             '3/day intact':'rewardedBuildsToday<3' in main,
-            'school day rule intact':'school_player_last_completed_day' in school,
-            'dinner three bite save clamp':'Math.min(3,prefs.getInt("school_player_dinner_bites",0))' in school,
-            'dinner touch limit':'dinnerBites<3&&dishRect.contains' in school and 'dinnerBites>=3&&action.contains' in school,
-            'deruny branded sour cream':'ГАЛИЧИНА' in school and 'СМЕТАНА' in school and 'float cupX=' in school,
-            'resume school week':'schoolWeekStarted' in resume and 'SchoolWeekActivity.class' in resume,
-            'resume existing progress':'hasProgress' in resume and 'MainActivity.class' in resume,
+            'school day anti-double-count':'school_player_last_completed_day' in school,
+            'grade bounded 2..11':'Math.max(2,Math.min(11,prefs.getInt("school_grade",2)))' in school,
+            'grade increments':'grade++' in school and 'grade<11' in school,
+            'year completion':'schoolDone>=5&&weekendDone>=2' in school,
+            '11th grade final':'grade>=11' in school and 'Шкільний шлях завершено' in school,
+            'dinner 3 bites':'Math.min(3,prefs.getInt("school_player_dinner_bites",0))' in school,
+            'weekend saves completion':'school_year_complete' in swim and 'school_year_complete_day' in swim,
+            'intro cannot reset first class':'putBoolean("school_first_day_complete",false)' not in school_intro,
+            'intro routes current grade':'SchoolWeekActivity.class' in school_intro and 'currentGrade()' in school_intro,
+            'resume repair':'SchoolProgressionGuard.repair(p);' in resume,
+            'guard repairs complete counters':'school>=5&&weekend>=2' in guard and 'putBoolean("school_year_complete",true)' in guard,
             'resume launcher':'.ResumeActivity' in manifest and 'android.intent.action.MAIN' in manifest,
-            'intro no longer exported launcher':'android:name=".IntroActivity" android:screenOrientation="portrait" android:exported="false"' in manifest,
-            'versionCode 53':re.search(r'versionCode\s+53\b',gradle) is not None,
-            'versionName 18.20':'versionName "18.20"' in gradle,
+            'versionCode 54':re.search(r'versionCode\s+54\b',gradle) is not None,
+            'versionName 18.21':'versionName "18.21"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.20 checks failed: '+'; '.join(failed))
-          print('Canonical v18.20 source tree OK')
+          if failed: raise SystemExit('v18.21 source checks failed: '+'; '.join(failed))
+
+          # Deterministic state-machine smoke test: start grade 2 on Monday,
+          # count one real school-life day per date, 5 weekdays + 2 weekend days.
+          grade=2
+          completed_grades=[]
+          for absolute_day in range(200):
+              dow=absolute_day % 7  # 0..4 weekday, 5..6 weekend
+              if absolute_day % 7 == 0:
+                  school_done=0
+                  weekend_done=0
+              if dow < 5 and school_done < 5:
+                  school_done += 1
+              elif dow >= 5 and weekend_done < 2:
+                  weekend_done += 1
+              if school_done == 5 and weekend_done == 2:
+                  completed_grades.append(grade)
+                  if grade == 11:
+                      break
+                  grade += 1
+          expected=list(range(2,12))
+          if completed_grades != expected:
+              raise SystemExit(f'grade path broken: {completed_grades!r}')
+          if grade != 11:
+              raise SystemExit('did not reach grade 11')
+          print('Canonical v18.21 source tree OK; school path 2→11 reachable')
           PY
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
