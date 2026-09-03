@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         float density, textScale, safeTop, safeBottom;
         boolean compact, narrow, finished, rolling, ballReady, draggingBall, sponsorScene, sponsorRewarded, coinsAwarded;
         int balls, score, bestScore, buildQuality, decorQuality, decorPlaced, combo;
-        int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday, snowCondition;
+        int year, wallet, runCoins, mission, yearBuilds, rewardedBuildsToday, snowCondition, visitorType;
         long rewardDay;
         long startTime, sponsorStart;
         int finishSeconds;
@@ -78,13 +78,14 @@ public class MainActivity extends Activity {
             yearBuilds=Math.max(0,Math.min(3,prefs.getInt("year_builds_"+year,0)));
             syncDailyState();
             snowCondition=dailySnowCondition();
+            visitorType=dailyVisitor();
             text.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeCap(Paint.Cap.ROUND);
             String[] names={"Очі","Морква","Ґудзики","Шарф","Шапка","Руки"};
             for(int i=0;i<ACCESSORY_COUNT;i++) items[i]=new Accessory(i,names[i]);
             mission=dailyMission();
-            tip="Сніг сьогодні: "+snowName()+" • коти першу кулю";
+            tip=visitorRequest();
             setClickable(true);
             setOnApplyWindowInsetsListener(new OnApplyWindowInsetsListener(){
                 @Override public WindowInsets onApplyWindowInsets(View v,WindowInsets insets){
@@ -156,11 +157,26 @@ public class MainActivity extends Activity {
         }
         int dailySnowCondition(){return (int)Math.floorMod(rewardDay*13L+7L,3L);}
         String snowName(){return snowCondition==0?"ПУХКИЙ":(snowCondition==1?"МОКРИЙ":"КРИЖАНИЙ");}
+        int dailyVisitor(){return (int)Math.floorMod(rewardDay*19L+year*11L,4L);}
+        String visitorName(){return visitorType==0?"МАЙСТРИНЯ":(visitorType==1?"ФОТОГРАФ":(visitorType==2?"ДИТИНА":"СУСІД"));}
+        String visitorRequest(){
+            if(visitorType==0)return "Гість дня: майстриня • хоче шарф і 4+ деталі";
+            if(visitorType==1)return "Гість дня: фотограф • хоче точні кулі й декор";
+            if(visitorType==2)return "Гість дня: дитина • хоче шапку і 5+ деталей";
+            return "Гість дня: сусід • хоче простого сніговика з 3 деталей";
+        }
+        boolean visitorSuccess(){
+            if(visitorType==0)return items[SCARF].placed&&decorPlaced>=4;
+            if(visitorType==1)return avgBuild()>=90&&avgDecor()>=75;
+            if(visitorType==2)return items[HAT].placed&&decorPlaced>=5;
+            return decorPlaced==3;
+        }
+        String visitorMemoryKey(){return "visitor_memory_"+rewardDay;}
         void refreshDailyIfNeeded(){
             long now=localDayNumber();
             if(now==rewardDay)return;
-            syncDailyState();mission=dailyMission();snowCondition=dailySnowCondition();
-            tip="Новий день • сніг: "+snowName()+" • коти першу кулю";
+            syncDailyState();mission=dailyMission();snowCondition=dailySnowCondition();visitorType=dailyVisitor();
+            tip=visitorRequest();
         }
         String timeText(int s){return String.format("%d:%02d",s/60,s%60);}
         void buzz(int ms){
@@ -542,6 +558,7 @@ public class MainActivity extends Activity {
                     prefs.edit().putInt("coins",wallet).putLong("reward_day",rewardDay).putInt("rewarded_builds_today",rewardedBuildsToday).putInt("year_builds_"+year,yearBuilds).apply();
                 }else runCoins=0;
             }
+            if(visitorSuccess()&&!prefs.getBoolean(visitorMemoryKey(),false))prefs.edit().putBoolean(visitorMemoryKey(),true).apply();
             if(score>bestScore){bestScore=score;prefs.edit().putInt("best_score",bestScore).apply();}
             buzz(65);invalidate();
         }
@@ -563,6 +580,12 @@ public class MainActivity extends Activity {
             c.drawText(rewardText,coin.centerX(),coin.centerY()+dp(3),text);
             RectF badge=new RectF(card.left+dp(24),card.top+dp(205),card.right-dp(24),card.top+dp(248));
             p.setColor(missionSuccess?Color.rgb(229,246,237):Color.rgb(246,239,232));c.drawRoundRect(badge,dp(15),dp(15),p);text.setTextSize(tx(8));text.setColor(missionSuccess?Color.rgb(55,130,104):Color.rgb(145,106,72));c.drawText(missionSuccess?"МІСІЮ ВИКОНАНО +250":"МІСІЮ НЕ ВИКОНАНО",badge.centerX(),badge.centerY()+dp(3),text);
+
+            RectF visitor=new RectF(card.left+dp(24),card.top+dp(256),card.right-dp(24),card.top+dp(292));
+            boolean visitorDone=visitorSuccess();
+            p.setColor(visitorDone?Color.rgb(237,245,255):Color.rgb(247,244,238));c.drawRoundRect(visitor,dp(13),dp(13),p);
+            text.setTextSize(tx(7.1f));text.setColor(visitorDone?Color.rgb(57,103,151):Color.rgb(127,105,75));
+            c.drawText(visitorDone?("СПОГАД ДНЯ • "+visitorName()+" • ЗБЕРЕЖЕНО"):("ГІСТЬ ДНЯ • "+visitorName()+" • СПРОБУЙ ЩЕ"),visitor.centerX(),visitor.centerY()+dp(3),text);
 
             sponsorBtn.set(card.left+dp(22),card.bottom-dp(178),card.right-dp(22),card.bottom-dp(128));
             boolean yearReady=year>=7||yearBuilds>=3;
@@ -608,8 +631,8 @@ public class MainActivity extends Activity {
 
         void reset(){
             balls=0;score=0;buildQuality=0;decorQuality=0;decorPlaced=0;combo=0;finished=false;rolling=false;ballReady=false;draggingBall=false;draggingAccessory=-1;
-            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();mission=dailyMission();giftType=-1;
-            refreshDailyIfNeeded();tip="Сніг сьогодні: "+snowName()+" • коти першу кулю";rollX=Float.NaN;rollY=Float.NaN;
+            sponsorScene=false;sponsorRewarded=false;coinsAwarded=false;runCoins=0;rollProgress=0;startTime=0;finishSeconds=0;missionSuccess=false;syncDailyState();mission=dailyMission();visitorType=dailyVisitor();giftType=-1;
+            refreshDailyIfNeeded();tip=visitorRequest();rollX=Float.NaN;rollY=Float.NaN;
             for(Accessory a:items){a.placed=false;a.quality=0;a.x=a.y=0;}
             buzz(18);invalidate();
         }

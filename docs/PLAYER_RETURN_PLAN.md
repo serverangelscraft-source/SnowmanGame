@@ -1,7 +1,7 @@
 # SnowmanGame — player return / mobile loop plan
 
 Updated: 2026-09-03
-Current Android build: v18.15
+Current Android build: v18.16
 
 ## Current state
 - Core snowman construction loop is playable: roll 3 balls, place 6 accessories, score build/decor, complete one daily mission, receive coins on up to 3 rewarded builds per local calendar date.
@@ -56,10 +56,16 @@ Current Android build: v18.15
 - Snow is shown in the existing HUD line and opening tip; no extra card/panel.
 - A date change while the Activity remains open refreshes quota, mission and snow together.
 
-### P2 — daily curiosity card
-- One optional visitor/client per day asks for a style: stable / funny / photo-friendly / regional-pattern.
-- Do not lock core progression behind the client card.
-- Reward should primarily be a memory/cosmetic entry; avoid creating another farmable currency path.
+### DONE v18.16 — daily curiosity visitor
+- One deterministic visitor per local calendar day asks for a compact style goal: майстриня / фотограф / дитина / сусід.
+- Replay cannot reroll the visitor because it derives from the same local-day state as mission/snow.
+- Fulfilling the request stores only a date-keyed memory marker; it awards no coins and never gates progression.
+- The request uses the existing opening tip; the result uses a small block inside the existing result card, so no new menu is added.
+
+### P2 — compact-phone regression + memory presentation
+- Verify 320–360dp-wide layouts after the larger accessory tray and visitor result line.
+- If the result card becomes crowded, shorten copy before shrinking touch targets.
+- Later expose saved visitor memories as a lightweight scrapbook, not a second economy.
 
 ## Safe pseudo-collaboration ideas (do not present as real partnerships)
 ### Nova Poshta × ETNODIM inspiration
@@ -108,3 +114,10 @@ The v18.15 daily-snow milestone is achieved. The next working milestone should b
 - Kept the mechanical differences intentionally small so daily variation creates curiosity rather than punishment.
 - Next P2 is one optional daily curiosity visitor/client and compact-phone regression testing.
 - Fresh inspiration: Ukrainian retail coverage around late-August 2026 highlights strong familiar national brands; adapt the useful pattern as fictional rotating local makers/visitors, not logos or claimed partnerships.
+
+## Cycle update — 2026-09-03 visitor cycle
+- Added one date-stable optional visitor request without another currency or progression gate.
+- Visitor success writes a one-per-date memory marker only; replay cannot farm value or reroll the request.
+- Kept the request in the existing tip and result card to protect phone screen space.
+- Next priority is compact-phone regression and deciding whether saved memories deserve a tiny scrapbook surface.
+- Fresh business inspiration: late-August Ukrainian campaigns increasingly combine several makers/brands around one shared theme; the safe game translation is rotating fictional winter visitors with distinct craft requests, not logos or claimed partnerships.

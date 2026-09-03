@@ -10,7 +10,7 @@ android {
         applicationId "com.snowmangame"
         minSdk 24
         targetSdk 35
-        versionCode 48
-        versionName "18.15"
+        versionCode 49
+        versionName "18.16"
     }
 }
