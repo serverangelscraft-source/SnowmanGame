@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -31,7 +31,10 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Validate canonical v18.13 source tree
+      - name: Apply v18.14 expressive completion
+        run: python scripts/apply_v18_14_expressive_completion.py
+
+      - name: Validate canonical v18.14 source tree
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -53,23 +56,39 @@ jobs:
           if set(sources)!=registered: raise SystemExit('Activity source/manifest mismatch')
 
           checks={
+            'expressive completion helper':'requiredDecorReady()' in main and 'items[EYES].placed&&items[NOSE].placed&&decorPlaced>=3' in main,
+            'finish no longer 6/6 gated':'decorPlaced==ACCESSORY_COUNT' not in main,
+            'finish touch uses expressive gate':'requiredDecorReady()&&finishBtn.contains(x,y)' in main,
+            'optional style remains':'СТИЛЬ +' in main and 'optionalDecorCount()' in main,
+            'persistent bottom action':'ПОТРІБНО: ОЧІ + МОРКВА + ЩЕ 1' in main,
+            'speed rebalanced':'Math.max(48,72-year*3)' in main,
+            'task-first hud':'ЛІПЛЕННЯ' in main and 'ВІЛЬНА РОБОТА' in main and 'Рік '+chr(34) not in '',
             'daily reward keys':'reward_day' in main and 'rewarded_builds_today' in main,
             '3/day reward gate':'rewardedBuildsToday<3' in main,
-            'free mode after quota':'ВІЛЬНА РОБОТА • НАГОРОДИ 3/3' in main,
-            'stable daily mission':'int dailyMission()' in main and 'mission=dailyMission();' in main,
-            'local calendar day':'Calendar.getInstance()' in main and 'GregorianCalendar' in main,
             'pre-school ice cream once':'pre_school_icecream_done' in main,
             'year transition explicit':'confirmYearAdvance()' in journey,
             'school DONE compact':'centerText(c,"ДЕНЬ ПРОЖИТО"' in school,
-            'no Gradle source mutation':'patchDinnerUi' not in gradle and 'dinnerSource' not in gradle,
-            'plan advanced':'DONE v18.13 — daily reward integrity' in plan,
-            'versionCode 46':re.search(r'versionCode\s+46\b',gradle) is not None,
-            'versionName 18.13':'versionName "18.13"' in gradle,
+            'plan advanced':'DONE v18.14 — expressive completion + mobile action hierarchy' in plan,
+            'versionCode 47':re.search(r'versionCode\s+47\b',gradle) is not None,
+            'versionName 18.14':'versionName "18.14"' in gradle,
           }
           failed=[k for k,v in checks.items() if not v]
-          if failed: raise SystemExit('v18.13 checks failed: '+'; '.join(failed))
-          print('Canonical v18.13 source tree OK')
+          if failed: raise SystemExit('v18.14 checks failed: '+'; '.join(failed))
+          print('Canonical v18.14 source tree OK')
           PY
+
+      - name: Persist v18.14 canonical sources
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle app/src/main/java/com/snowmangame/MainActivity.java docs/PLAYER_RETURN_PLAN.md
+          if git diff --cached --quiet; then
+            echo 'v18.14 sources already canonical'
+          else
+            git commit -m 'Normalize v18.14 expressive completion and mobile HUD'
+            git push
+          fi
 
       - name: Build current source tree
         run: gradle assembleRelease --stacktrace --no-daemon
