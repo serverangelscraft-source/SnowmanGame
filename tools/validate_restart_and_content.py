@@ -39,8 +39,12 @@ if 'SchoolProgressionGuard.repair(p);' not in resume:
 for grade in range(7,12):
     if f'case {grade}:return ' not in content:
         raise SystemExit(f'missing theme for grade {grade}')
-    if content.count(f'if(grade=={grade})') < 2:
-        raise SystemExit(f'grade {grade} does not have hook + question coverage')
+    if content.count(f'if(grade=={grade})') < 4:
+        raise SystemExit(f'grade {grade} does not have hook/title/question/answer coverage')
+
+for api in ['public static String lessonTitle','public static String question','public static String[] options','public static int correct']:
+    if api not in content:
+        raise SystemExit('senior content API missing: '+api)
 
 for phrase in [
     'Власний голос','Вибір і наслідки','Майстерність',
@@ -50,8 +54,12 @@ for phrase in [
     if phrase not in content:
         raise SystemExit('senior content regression: '+phrase)
 
-if 'public static String[] options' not in content or 'public static int correct' not in content:
-    raise SystemExit('senior answer/correct-answer API missing')
+# Answers must be keyed by grade/day, not inferred from copy fragments. Otherwise a
+# harmless wording edit can silently change the available answers.
+if 'q.contains(' in content:
+    raise SystemExit('senior options must not depend on question substring matching')
+if 'return question(grade,schoolDay,second)==null?-1:0;' not in content:
+    raise SystemExit('senior correct-answer contract changed unexpectedly')
 
 arrays=re.findall(r'new String\[\]\{([^}]*)\}',content)
 labels=[]
@@ -61,4 +69,4 @@ long=[x for x in labels if len(x)>26]
 if long:
     raise SystemExit('senior option label too long for narrow-phone cards: '+repr(long[:5]))
 
-print('OK: restart save keys + grade 7–11 content invariants present')
+print('OK: restart save keys + deterministic grade 7–11 content invariants present')
