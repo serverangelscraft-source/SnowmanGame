@@ -27,6 +27,8 @@ Current focus: make the game comfortably playable from current save through grad
 - Current grade 2..11 is preserved.
 - Save repair reconstructs a missing completed-year flag when counters are already 5/5 + 2/2.
 - CI includes a deterministic 2→11 progression smoke test.
+- Snow-swim weekend sessions now snapshot their start date/day type and persist that snapshot across process restart, so a Sunday session that finishes after midnight is still evaluated as the Sunday it started on.
+- An abandoned older snow-swim session cannot be counted after a newer school-life day; stale session metadata is cleared instead of corrupting chronology.
 
 ## Current P1 problems
 ### P1.1 — senior grades feel repeated
@@ -38,15 +40,20 @@ Direction:
 - grades 7–11 need distinct themes, questions and small story hooks;
 - no extra currency, grind meter or mandatory extra taps.
 
-Implementation started: `SchoolGradeContent.java` now contains distinct packs for grades 7–11. Next step is wiring it into `SchoolWeekActivity` without changing save keys/state transitions.
+Implementation started: `SchoolGradeContent.java` contains distinct packs for grades 7–11. Next step is wiring it into `SchoolWeekActivity` without changing save keys/state transitions.
 
-### P1.2 — cross-midnight / restart edge cases
-`SnowSwimActivity` decides weekend status using the clock at completion time. A weekend activity started before midnight can finish after midnight and become non-countable. School stages also need explicit restart checks across midnight.
+### P1.2 — restart coverage inside the normal school day
+The weekend cross-midnight loss is closed, but every normal-day stage still needs explicit process-death regression coverage:
+- MORNING;
+- LESSON1;
+- BREAK;
+- LESSON2;
+- HOME;
+- DINNER;
+- year transition;
+- grade-11 terminal state.
 
-Direction:
-- snapshot the counted school-life date/day-type when an activity starts;
-- completion uses the snapshot, not a later clock value;
-- never allow the same date to count twice.
+Rule: reopening the app must reconstruct the same stage from SharedPreferences without replaying an earlier story scene or silently consuming a day.
 
 ### P1.3 — mobile regression
 Verify 320–360dp widths and short usable heights for:
@@ -86,13 +93,14 @@ Use real Ukrainian business/culture activity only as inspiration. Never claim a 
 ### Current inspiration — September 2026
 - Ukrainian Fashion Week SS27: reinterpretation of Ukrainian craft/handmade work → fictional `Майстерня орнаменту`, where a student chooses a scarf/hat pattern for a class photo.
 - School Nostalgia charity food initiative → fictional `Записка з перерви`, a tiny paper puzzle/memory after an ordinary school meal, without copying the restaurant/artist branding.
-- PrivateLabel&FMCG Master 2026 (Kyiv, 3–4 Sep) focuses on how everyday products move from maker to shelf → safe grade-9/10 mini-story `Від майстерні до полиці`: choose package shape, label clarity and delivery order for a fictional winter-school product; cosmetic/story only, no real retailer names.
+- PrivateLabel&FMCG Master 2026 (Kyiv, 3–4 Sep): maker-to-shelf thinking → grade-9/10 mini-story `Від майстерні до полиці`, cosmetic/story only.
+- DOU Day Picnic 2026 (Kyiv, 5 Sep) mixes technology talks, outdoor activities, workshops and community zones → safe fictional senior-grade event `Шкільний технопікнік`: choose one workshop station (build, design, presentation) and receive only a scrapbook memory/photo composition. No real event branding, ticketing or company logos.
 
 ## Next tasks
 1. **P1** Wire `SchoolGradeContent` into grades 7–11 while leaving progression state untouched.
-2. **P1** Fix cross-midnight snapshot logic for weekend/school completion.
-3. **P1** Run restart/update checks at MORNING → LESSON1 → BREAK → LESSON2 → HOME → DINNER → weekend → year transition → grade-11 finish.
-4. **P1** Run 320/360dp + short-height UI regression.
+2. **P1** Add deterministic restart checks for MORNING → LESSON1 → BREAK → LESSON2 → HOME → DINNER → year transition → grade-11 finish.
+3. **P1** Run 320/360dp + short-height UI regression, starting with senior questions and snow-swim controls.
+4. **P1** Verify the new cross-midnight snow-swim snapshot build in CI and on-device update path.
 5. **P2** Only after those pass: add a lightweight graduation map/progress view. No new currency or streak.
 
 ## Working-state definition
