@@ -35,7 +35,8 @@ public class ResumeActivity extends Activity {
                 || p.contains("year_builds_6")
                 || p.contains("year_builds_7");
 
-        if(schoolWeekStarted) next=new Intent(this,IntegratedSchoolWeekActivity.class);
+        if(SchoolIntegrationSession.pending(p)) next=SchoolIntegrationSession.resumeIntent(this,p);
+        else if(schoolWeekStarted) next=new Intent(this,IntegratedSchoolWeekActivity.class);
         else if(schoolUnlocked) next=new Intent(this,SchoolActivity.class);
         else if(hasProgress) next=new Intent(this,MainActivity.class);
         else next=new Intent(this,IntroActivity.class);
