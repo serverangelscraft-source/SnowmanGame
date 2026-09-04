@@ -1,0 +1,27 @@
+name: Validate school progression
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/src/main/java/com/snowmangame/School*.java'
+      - 'app/src/main/java/com/snowmangame/SnowSwimActivity.java'
+      - 'tools/validate_school_path.py'
+      - 'tools/validate_restart_and_content.py'
+      - '.github/workflows/validate-school.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Validate grade path
+        run: python tools/validate_school_path.py
+      - name: Validate restart and senior content
+        run: python tools/validate_restart_and_content.py
