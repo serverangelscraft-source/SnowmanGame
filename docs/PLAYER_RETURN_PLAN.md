@@ -25,6 +25,7 @@ Current focus: stable play from existing save through grade 11 with visible seni
 - Optional school integrations are wired into the live senior flow after lesson 2 without owning any school progression keys.
 - Integration sessions now persist active grade/day/selected card. Process death resumes the unfinished event; intentional Back clears it as an optional skip; saving the memory clears the active session atomically.
 - Narrow-phone integration headings and card labels use separate width constraints instead of shrinking the whole screen to card width.
+- `МІСТО ДЛЯ СНІГОВИКА` is now in the grade 10–11 integration pool using the same memory-only framework.
 
 ## Current P1 problems
 ### P1.1 — runtime restart coverage
@@ -84,17 +85,17 @@ Do not add energy bars, paid retries, mandatory streaks, punishment for missed d
 Use active Ukrainian business/culture activity as inspiration only. Never claim a partnership, copy campaign art/logos, or attach a real brand to paid/random rewards without permission. `Галичина` remains the explicitly approved in-world food reference.
 
 ### Current inspiration — September 2026
-Already adapted into the integration system: craft/fashion workshop, school tech picnic, gift workshop, five-minute fair, maker-to-shelf project, break memory, winter yard, shadow-photo prompt and regional workshop.
+Already adapted into the integration system: craft/fashion workshop, school tech picnic, gift workshop, five-minute fair, maker-to-shelf project, break memory, winter yard, shadow-photo prompt, regional workshop and `МІСТО ДЛЯ СНІГОВИКА`.
 
-New research direction: September Fest 2026 in Kyiv (18–19 Sep) focuses on urban development, architecture, design and quality of urban life. Safe adaptation: fictional `МІСТО ДЛЯ СНІГОВИКА` for grade 10–11. Player chooses one courtyard improvement — `СВІТЛО`, `ЗАХИСТ ВІД ВІТРУ`, or `ЗРУЧНИЙ ПРОХІД` — then the school photo/background reflects the choice. Memory-only; no real organizer/developer branding and no economy reward.
+`МІСТО ДЛЯ СНІГОВИКА` is inspired by current Ukrainian urban-design themes. In grade 10–11 the player chooses one courtyard improvement — `СВІТЛО`, `ЗАХИСТ ВІД ВІТРУ`, or `ЗРУЧНИЙ ПРОХІД`. It remains a fictional in-game school project, memory-only, with no organizer/developer branding and no economy reward.
 
 ## Next tasks
-1. **P1** Keep latest build + `Validate school progression` green with integration-session regression guards.
-2. **P1** Fix `MainActivity.drawFinish()` short-height crowding.
-3. **P1** Run 320/360dp + short-height checks for senior questions, integration cards, dinner and SnowSwim controls.
-4. **P1** Runtime process-death pass across school/integration/SnowSwim states.
-5. **P2** Add `МІСТО ДЛЯ СНІГОВИКА` only after the existing integration path remains green; reuse the same memory-only event framework.
-6. **P2** Add a lightweight graduation/path map after stability. No new currency or streak.
+1. **P1** Fix `MainActivity.drawFinish()` short-height crowding.
+2. **P1** Run 320/360dp + short-height checks for senior questions, integration cards, dinner and SnowSwim controls.
+3. **P1** Runtime process-death pass across school/integration/SnowSwim states.
+4. **P1** Keep latest build + `Validate school progression` green after every save/state change.
+5. **P2** Add a lightweight graduation/path map after stability. No new currency or streak.
+6. **P2** Remove/merge dead `WEEKEND_MINI` after runtime coverage is green.
 
 ## Working-state definition
 A build is ready for normal play when all are true:
