@@ -2,7 +2,8 @@
 """Static regression checks for school resume safety and grades 7–11 content.
 
 These checks intentionally avoid changing Android progression logic. They fail CI if
-save/restart invariants or the senior-grade content pack are accidentally removed.
+save/restart invariants, integration resume safety or the senior-grade content pack
+are accidentally removed.
 """
 from pathlib import Path
 import re
@@ -11,6 +12,8 @@ root=Path(__file__).resolve().parents[1]
 school=(root/'app/src/main/java/com/snowmangame/SchoolWeekActivity.java').read_text(encoding='utf-8')
 content=(root/'app/src/main/java/com/snowmangame/SchoolGradeContent.java').read_text(encoding='utf-8')
 resume=(root/'app/src/main/java/com/snowmangame/ResumeActivity.java').read_text(encoding='utf-8')
+integration=(root/'app/src/main/java/com/snowmangame/SchoolIntegrationActivity.java').read_text(encoding='utf-8')
+session=(root/'app/src/main/java/com/snowmangame/SchoolIntegrationSession.java').read_text(encoding='utf-8')
 
 required_school_fragments={
     'stage saved':'putInt("school_player_stage",s)',
@@ -35,6 +38,25 @@ if missing:
 
 if 'SchoolProgressionGuard.repair(p);' not in resume:
     raise SystemExit('ResumeActivity no longer repairs known old saves before routing')
+
+# Optional integrations must survive process death without becoming a progression key.
+integration_checks={
+    'resume routes pending integration':'SchoolIntegrationSession.pending(p)' in resume and 'SchoolIntegrationSession.resumeIntent(this,p)' in resume,
+    'session has isolated active flag':'school_integration_active' in session,
+    'session snapshots grade':'school_integration_active_grade' in session,
+    'session snapshots school day':'school_integration_active_day' in session,
+    'session snapshots selected card':'school_integration_active_choice' in session,
+    'activity starts restart-safe session':'SchoolIntegrationSession.begin(prefs,grade,schoolDay)' in integration,
+    'selection persists':'SchoolIntegrationSession.select(prefs,i)' in integration,
+    'completion is atomic':'SchoolIntegrationSession.complete(prefs,grade,schoolDay,eventId,selected)' in integration,
+    'back intentionally skips optional event':'SchoolIntegrationSession.clear(getSharedPreferences("snowman_game",Context.MODE_PRIVATE))' in integration,
+}
+failed=[name for name,ok in integration_checks.items() if not ok]
+if failed:
+    raise SystemExit('integration restart invariant missing: '+'; '.join(failed))
+for forbidden in ['school_grade','school_year_school_done','school_year_weekend_done','school_player_last_completed_day']:
+    if forbidden in session:
+        raise SystemExit('integration session must not own progression key: '+forbidden)
 
 for grade in range(7,12):
     if f'case {grade}:return ' not in content:
@@ -69,4 +91,4 @@ long=[x for x in labels if len(x)>26]
 if long:
     raise SystemExit('senior option label too long for narrow-phone cards: '+repr(long[:5]))
 
-print('OK: restart save keys + deterministic grade 7–11 content invariants present')
+print('OK: restart keys + integration resume + deterministic grade 7–11 content invariants present')
