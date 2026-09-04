@@ -16,6 +16,7 @@ public final class SchoolIntegrationContent {
     public static final int WINTER_YARD=7;
     public static final int SNOW_SHADOW=8;
     public static final int REGIONAL_WORKSHOP=9;
+    public static final int CITY_FOR_SNOWMAN=10;
 
     /** Deterministic by grade + school day. No rerolling on restart. */
     public static int eventFor(int grade,int schoolDay){
@@ -23,8 +24,8 @@ public final class SchoolIntegrationContent {
         if(grade==7){int[] a={GIFT_WORKSHOP,ORNAMENT,BREAK_MEMORY,REGIONAL_WORKSHOP,WINTER_YARD};return a[d-1];}
         if(grade==8){int[] a={ORNAMENT,GIFT_WORKSHOP,WINTER_YARD,BREAK_MEMORY,REGIONAL_WORKSHOP};return a[d-1];}
         if(grade==9){int[] a={TECH_PICNIC,GIFT_WORKSHOP,FIVE_MIN_FAIR,SNOW_SHADOW,WINTER_YARD};return a[d-1];}
-        if(grade==10){int[] a={FIVE_MIN_FAIR,TECH_PICNIC,SHELF_PROJECT,ORNAMENT,SNOW_SHADOW};return a[d-1];}
-        if(grade==11){int[] a={SHELF_PROJECT,TECH_PICNIC,SNOW_SHADOW,WINTER_YARD,REGIONAL_WORKSHOP};return a[d-1];}
+        if(grade==10){int[] a={FIVE_MIN_FAIR,TECH_PICNIC,SHELF_PROJECT,CITY_FOR_SNOWMAN,SNOW_SHADOW};return a[d-1];}
+        if(grade==11){int[] a={SHELF_PROJECT,CITY_FOR_SNOWMAN,SNOW_SHADOW,WINTER_YARD,REGIONAL_WORKSHOP};return a[d-1];}
         return NONE;
     }
 
@@ -39,6 +40,7 @@ public final class SchoolIntegrationContent {
             case WINTER_YARD:return "ЗИМОВИЙ ДВІР";
             case SNOW_SHADOW:return "ТІНЬ СНІГОВИКА";
             case REGIONAL_WORKSHOP:return "РЕГІОНАЛЬНА МАЙСТЕРНЯ";
+            case CITY_FOR_SNOWMAN:return "МІСТО ДЛЯ СНІГОВИКА";
             default:return "";
         }
     }
@@ -54,6 +56,7 @@ public final class SchoolIntegrationContent {
             case WINTER_YARD:return "Обери місце для шкільного фото.";
             case SNOW_SHADOW:return "Знайди позу з найкращим силуетом.";
             case REGIONAL_WORKSHOP:return "Обери стилізований зимовий мотив.";
+            case CITY_FOR_SNOWMAN:return "Що зробить зимовий двір зручнішим?";
             default:return "";
         }
     }
@@ -69,6 +72,7 @@ public final class SchoolIntegrationContent {
             case WINTER_YARD:return new String[]{"ЛАВКА","ЛІХТАР","ПОШТОВА СКРИНЬКА"};
             case SNOW_SHADOW:return new String[]{"КАПЕЛЮХ","ШАРФ","ПОВОРОТ"};
             case REGIONAL_WORKSHOP:return new String[]{"РОМБИ","ГІЛКА","СНІЖИНКА"};
+            case CITY_FOR_SNOWMAN:return new String[]{"СВІТЛО","ЗАХИСТ ВІД ВІТРУ","ЗРУЧНИЙ ПРОХІД"};
             default:return new String[]{"ДАЛІ"};
         }
     }
@@ -85,6 +89,7 @@ public final class SchoolIntegrationContent {
             case WINTER_YARD:return "Фото у дворі: "+c[i].toLowerCase()+".";
             case SNOW_SHADOW:return "Фото «Тінь сніговика» збережено.";
             case REGIONAL_WORKSHOP:return "Майстерня: "+c[i].toLowerCase()+".";
+            case CITY_FOR_SNOWMAN:return "Місто для сніговика: "+c[i].toLowerCase()+".";
             default:return "";
         }
     }
