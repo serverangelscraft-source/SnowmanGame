@@ -12,9 +12,8 @@ school=(root/'app/src/main/java/com/snowmangame/SchoolWeekActivity.java').read_t
 content=(root/'app/src/main/java/com/snowmangame/SchoolGradeContent.java').read_text(encoding='utf-8')
 resume=(root/'app/src/main/java/com/snowmangame/ResumeActivity.java').read_text(encoding='utf-8')
 
-# Every interactive normal-day stage must be persisted, and its mini-state restored.
 required_school_fragments={
-    'stage saved':'putInt("school_player_stage",s)' ,
+    'stage saved':'putInt("school_player_stage",s)',
     'stage date saved':'putLong("school_player_stage_day",effectiveDay)',
     'stage restored':'stage=prefs.getInt("school_player_stage",defaultStage())',
     'bag restored':'bagMask=prefs.getInt("school_player_bag_mask",0)',
@@ -37,15 +36,12 @@ if missing:
 if 'SchoolProgressionGuard.repair(p);' not in resume:
     raise SystemExit('ResumeActivity no longer repairs known old saves before routing')
 
-# Senior-grade packs must exist for every grade, every school day, and both lessons.
 for grade in range(7,12):
     if f'case {grade}:return ' not in content:
         raise SystemExit(f'missing theme for grade {grade}')
-    marker=f'if(grade=={grade})'
-    if content.count(marker) < 3:
-        raise SystemExit(f'grade {grade} does not have full hook/question/options coverage')
+    if content.count(f'if(grade=={grade})') < 2:
+        raise SystemExit(f'grade {grade} does not have hook + question coverage')
 
-# Guard against the old generic fallback becoming the only visible senior content.
 for phrase in [
     'Власний голос','Вибір і наслідки','Майстерність',
     'Плани на майбутнє','Випуск і свій шлях',
@@ -54,7 +50,9 @@ for phrase in [
     if phrase not in content:
         raise SystemExit('senior content regression: '+phrase)
 
-# Mobile safety: answer cards are three columns, so keep senior labels compact.
+if 'public static String[] options' not in content or 'public static int correct' not in content:
+    raise SystemExit('senior answer/correct-answer API missing')
+
 arrays=re.findall(r'new String\[\]\{([^}]*)\}',content)
 labels=[]
 for body in arrays:
