@@ -27,12 +27,13 @@ Current focus: make the game comfortably playable from current save through grad
 - Current grade 2..11 is preserved.
 - Save repair reconstructs a missing completed-year flag when counters are already 5/5 + 2/2.
 - CI includes a deterministic 2→11 progression smoke test.
-- Snow-swim weekend sessions now snapshot their start date/day type and persist that snapshot across process restart, so a Sunday session that finishes after midnight is still evaluated as the Sunday it started on.
+- Snow-swim weekend sessions snapshot their start date/day type and persist that snapshot across process restart, so a Sunday session finishing after midnight is still evaluated as the Sunday it started on.
 - An abandoned older snow-swim session cannot be counted after a newer school-life day; stale session metadata is cleared instead of corrupting chronology.
+- Added a separate school regression workflow. It now blocks changes that remove stage save/restore keys, 2→11 reachability, grade-11 terminal state, senior content packs, or compact senior answer labels.
 
 ## Current P1 problems
 ### P1.1 — senior grades feel repeated
-The day state machine is usable, but grades 7–11 reuse too much of the same lesson text and therefore feel like the same year with a different number.
+The day state machine is usable, but grades 7–11 still reuse the old visible lesson text because the new packs are not wired into `SchoolWeekActivity` yet.
 
 Direction:
 - keep the tested 6-stage school-day shell;
@@ -40,10 +41,10 @@ Direction:
 - grades 7–11 need distinct themes, questions and small story hooks;
 - no extra currency, grind meter or mandatory extra taps.
 
-Implementation started: `SchoolGradeContent.java` contains distinct packs for grades 7–11. Next step is wiring it into `SchoolWeekActivity` without changing save keys/state transitions.
+Implementation state: `SchoolGradeContent.java` already contains distinct themes, 5 day hooks and two lesson questions per school day for grades 7–11. `tools/validate_restart_and_content.py` now protects those packs from silent regression. Next step remains wiring them into `SchoolWeekActivity` without changing save keys/state transitions.
 
 ### P1.2 — restart coverage inside the normal school day
-The weekend cross-midnight loss is closed, but every normal-day stage still needs explicit process-death regression coverage:
+Static coverage is now guarded in CI for stage and mini-state persistence, but device/process-death behavior still needs explicit runtime regression at:
 - MORNING;
 - LESSON1;
 - BREAK;
@@ -69,6 +70,8 @@ Rules:
 - no important control under system bars;
 - one dominant action per scene.
 
+A new CI guard rejects senior answer labels longer than 26 characters because three-column answer cards become unreadable first on narrow phones. Runtime rendering still needs device/emulator verification.
+
 ## Motivation to return
 Return should be curiosity, not obligation. A new day may change only one or two things:
 - snow feel;
@@ -92,15 +95,16 @@ Use real Ukrainian business/culture activity only as inspiration. Never claim a 
 
 ### Current inspiration — September 2026
 - Ukrainian Fashion Week SS27: reinterpretation of Ukrainian craft/handmade work → fictional `Майстерня орнаменту`, where a student chooses a scarf/hat pattern for a class photo.
-- School Nostalgia charity food initiative → fictional `Записка з перерви`, a tiny paper puzzle/memory after an ordinary school meal, without copying the restaurant/artist branding.
+- School Nostalgia charity food initiative → fictional `Записка з перерви`, a tiny paper puzzle/memory after an ordinary school meal, without copying restaurant/artist branding.
 - PrivateLabel&FMCG Master 2026 (Kyiv, 3–4 Sep): maker-to-shelf thinking → grade-9/10 mini-story `Від майстерні до полиці`, cosmetic/story only.
-- DOU Day Picnic 2026 (Kyiv, 5 Sep) mixes technology talks, outdoor activities, workshops and community zones → safe fictional senior-grade event `Шкільний технопікнік`: choose one workshop station (build, design, presentation) and receive only a scrapbook memory/photo composition. No real event branding, ticketing or company logos.
+- DOU Day Picnic 2026 (Kyiv, 5 Sep): technology + workshops + community → fictional senior-grade `Шкільний технопікнік` with one optional station and a scrapbook memory.
+- World of Gifts, Kyiv, 9–11 Sep 2026: handmade, author stationery, creative goods and gift wrapping → fictional `Шкільна майстерня подарунка`. The player chooses a handmade winter card, paper wrap or small classroom souvenir for a friend. It changes only the scrapbook composition; no shop, paid loot or real exhibitor branding.
 
 ## Next tasks
 1. **P1** Wire `SchoolGradeContent` into grades 7–11 while leaving progression state untouched.
-2. **P1** Add deterministic restart checks for MORNING → LESSON1 → BREAK → LESSON2 → HOME → DINNER → year transition → grade-11 finish.
+2. **P1** Run device/process-death checks for MORNING → LESSON1 → BREAK → LESSON2 → HOME → DINNER → year transition → grade-11 finish.
 3. **P1** Run 320/360dp + short-height UI regression, starting with senior questions and snow-swim controls.
-4. **P1** Verify the new cross-midnight snow-swim snapshot build in CI and on-device update path.
+4. **P1** Keep the new `Validate school progression` workflow green; treat a failure as a release blocker.
 5. **P2** Only after those pass: add a lightweight graduation map/progress view. No new currency or streak.
 
 ## Working-state definition
@@ -112,6 +116,6 @@ A build is ready for normal play when all are true:
 5. every school stage survives process restart;
 6. cross-midnight completion cannot lose or double-count a day;
 7. 11th grade reaches a terminal graduation state;
-8. grades 7–11 are meaningfully different in content;
+8. grades 7–11 are meaningfully different in visible content;
 9. primary screens remain usable at 320–360dp widths;
 10. core daily limits remain unchanged.
