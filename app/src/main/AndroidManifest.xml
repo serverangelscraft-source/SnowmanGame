@@ -22,6 +22,7 @@
         <activity android:name=".SchoolActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".ClassOneActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".SchoolWeekActivity" android:screenOrientation="portrait" android:exported="false"/>
+        <activity android:name=".SchoolIntegrationActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".SchoolCallActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".SnowSwimActivity" android:screenOrientation="portrait" android:exported="false"/>
         <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="false"/>
