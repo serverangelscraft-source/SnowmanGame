@@ -61,8 +61,6 @@ public final class SchoolGradeContent {
     public static String[] options(int grade,int schoolDay,boolean second){
         String q=question(grade,schoolDay,second);
         if(q==null)return null;
-        // Correct answer is deliberately always index 0 for senior packs. The
-        // state machine still owns retry/mistake handling; content stays data-only.
         if(q.contains("сварки"))return new String[]{"СПОКІЙНО ПОЯСНИТИ","ПЕРЕКРИЧАТИ","МОВЧАТИ ЗАВЖДИ"};
         if(q.contains("команда не згодна"))return new String[]{"ОБГОВОРИТИ ПРИЧИНУ","ОБРАЗИТИСЯ","ПІТИ"};
         if(q.contains("виступ"))return new String[]{"ПІДГОТУВАТИСЯ І СПРОБУВАТИ","СХОВАТИСЯ","ЗІРВАТИ УРОК"};
@@ -70,8 +68,8 @@ public final class SchoolGradeContent {
         if(q.contains("спільне рішення"))return new String[]{"ПОЧУТИ ВСІХ","ВИРІШИТИ САМОМУ","ПОСПЕРЕЧАТИСЯ"};
         if(q.contains("план"))return new String[]{"РОЗБИТИ НА КРОКИ","ЧЕКАТИ ВИПАДКУ","ВІДКЛАСТИ НАЗАВЖДИ"};
         if(q.contains("помил"))return new String[]{"РОЗІБРАТИ І ВИПРАВИТИ","СХОВАТИ","ЗВИНУВАТИТИ ІНШИХ"};
-        if(q.contains("роль"))return new String[]{"ОБРАТИ ЗА СИЛЬНИМИ СТОРОНАМИ","ТЯГНУТИ ЖЕРЕБ ЗАВЖДИ","НЕ РОБИТИ НІЧОГО"};
-        if(q.contains("сильн"))return new String[]{"СПРОБУВАТИ РІЗНЕ І ПОРІВНЯТИ","ВГАДАТИ","НЕ ПРОБУВАТИ"};
+        if(q.contains("роль"))return new String[]{"ОБРАТИ ЗА СИЛЬНИМИ","ТЯГНУТИ ЖЕРЕБ ЗАВЖДИ","НЕ РОБИТИ НІЧОГО"};
+        if(q.contains("сильн"))return new String[]{"СПРОБУВАТИ Й ПОРІВНЯТИ","ВГАДАТИ","НЕ ПРОБУВАТИ"};
         if(q.contains("поясн"))return new String[]{"ПРОСТО І З ПРИКЛАДОМ","ДУЖЕ ШВИДКО","НЕ СЛУХАТИ ПИТАНЬ"};
         if(q.contains("задач"))return new String[]{"РОЗБИТИ НА ЧАСТИНИ","КИНУТИ","ВГАДУВАТИ"};
         if(q.contains("проєкт"))return new String[]{"МЕТА І КРОКИ","ЛИШЕ НАЗВА","БЕЗ ПЛАНУ"};
