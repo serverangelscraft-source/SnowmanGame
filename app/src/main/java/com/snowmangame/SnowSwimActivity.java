@@ -15,40 +15,50 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 public class SnowSwimActivity extends Activity {
-    @Override public void onCreate(Bundle b){super.onCreate(b);Window w=getWindow();if(Build.VERSION.SDK_INT>=21){w.setStatusBarColor(Color.rgb(19,93,135));w.setNavigationBarColor(Color.rgb(226,245,251));}setContentView(new SwimView(this));}
+    @Override public void onCreate(Bundle b){
+        super.onCreate(b);
+        Window w=getWindow();
+        if(Build.VERSION.SDK_INT>=21){w.setStatusBarColor(Color.rgb(19,93,135));w.setNavigationBarColor(Color.rgb(226,245,251));}
+        boolean freePlay=getIntent()!=null&&getIntent().getBooleanExtra("freePlay",false);
+        setContentView(new SwimView(this,freePlay));
+    }
     static class SwimView extends View {
         final Context ctx;final SharedPreferences prefs;final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG),t=new Paint(Paint.ANTI_ALIAS_FLAG),stroke=new Paint(Paint.ANTI_ALIAS_FLAG);final RectF left=new RectF(),right=new RectF(),finish=new RectF();final float d,ts;
-        final long sessionDay; final boolean sessionWeekend;
+        final long sessionDay; final boolean sessionWeekend,freePlay;
         int strokes;boolean expectLeft,done,counted=false;String feedback="Чергуй лівий і правий гребок.";
-        SwimView(Context c){
-            super(c);ctx=c;prefs=c.getSharedPreferences("snowman_game",MODE_PRIVATE);d=getResources().getDisplayMetrics().density;ts=Math.min(getResources().getDisplayMetrics().scaledDensity,d*1.12f);t.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));stroke.setStyle(Paint.Style.STROKE);stroke.setStrokeCap(Paint.Cap.ROUND);setClickable(true);
+        SwimView(Context c,boolean freePlay){
+            super(c);ctx=c;this.freePlay=freePlay;prefs=c.getSharedPreferences("snowman_game",MODE_PRIVATE);d=getResources().getDisplayMetrics().density;ts=Math.min(getResources().getDisplayMetrics().scaledDensity,d*1.12f);t.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));stroke.setStyle(Paint.Style.STROKE);stroke.setStrokeCap(Paint.Cap.ROUND);setClickable(true);
             long now=localDay();
-            boolean active=prefs.getBoolean("snow_swim_session_active",false);
-            if(active){
-                sessionDay=prefs.getLong("snow_swim_session_day",now);sessionWeekend=prefs.getBoolean("snow_swim_session_weekend",isWeekendDay(sessionDay));
-                strokes=Math.max(0,Math.min(8,prefs.getInt("snow_swim_session_strokes",0)));
-                expectLeft=prefs.getBoolean("snow_swim_session_expect_left",strokes%2==0);
-                done=strokes>=8;
-                if(strokes>0&&!done)feedback="Сесію відновлено • гребки "+strokes+"/8.";
-                else if(done)feedback="Сесію відновлено на фініші.";
+            if(freePlay){
+                sessionDay=now;sessionWeekend=isWeekendDay(now);strokes=0;expectLeft=true;done=false;feedback="Вільне тренування • прогрес дня не змінюється.";
             }else{
-                sessionDay=now;sessionWeekend=isWeekendDay(now);strokes=0;expectLeft=true;done=false;
-                persistSession();
+                boolean active=prefs.getBoolean("snow_swim_session_active",false);
+                if(active){
+                    sessionDay=prefs.getLong("snow_swim_session_day",now);sessionWeekend=prefs.getBoolean("snow_swim_session_weekend",isWeekendDay(sessionDay));
+                    strokes=Math.max(0,Math.min(8,prefs.getInt("snow_swim_session_strokes",0)));
+                    expectLeft=prefs.getBoolean("snow_swim_session_expect_left",strokes%2==0);
+                    done=strokes>=8;
+                    if(strokes>0&&!done)feedback="Сесію відновлено • гребки "+strokes+"/8.";
+                    else if(done)feedback="Сесію відновлено на фініші.";
+                }else{
+                    sessionDay=now;sessionWeekend=isWeekendDay(now);strokes=0;expectLeft=true;done=false;
+                    persistSession();
+                }
             }
         }
         float dp(float v){return v*d;}float tx(float v){return v*ts;}
         long localDay(){Calendar c=Calendar.getInstance();GregorianCalendar u=new GregorianCalendar(TimeZone.getTimeZone("UTC"));u.clear();u.set(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH));return u.getTimeInMillis()/86400000L;}
         boolean isWeekendDay(long day){GregorianCalendar g=new GregorianCalendar(TimeZone.getTimeZone("UTC"));g.setTimeInMillis(day*86400000L);int x=g.get(Calendar.DAY_OF_WEEK);return x==Calendar.SATURDAY||x==Calendar.SUNDAY;}
-        void persistSession(){prefs.edit().putBoolean("snow_swim_session_active",true).putLong("snow_swim_session_day",sessionDay).putBoolean("snow_swim_session_weekend",sessionWeekend).putInt("snow_swim_session_strokes",strokes).putBoolean("snow_swim_session_expect_left",expectLeft).apply();}
-        void clearSession(){prefs.edit().remove("snow_swim_session_active").remove("snow_swim_session_day").remove("snow_swim_session_weekend").remove("snow_swim_session_strokes").remove("snow_swim_session_expect_left").apply();}
-        @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();LinearGradient g=new LinearGradient(0,0,0,h,Color.rgb(166,225,248),Color.rgb(236,249,253),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);t.setTextAlign(Paint.Align.CENTER);t.setColor(Color.rgb(31,88,119));t.setTextSize(tx(7));c.drawText("КРИЖАНИЙ СПОРТЗАЛ • -8 °C",w/2f,dp(48),t);t.setTextSize(tx(22));c.drawText("СНІГОПЛАВАННЯ",w/2f,dp(88),t);t.setTextSize(tx(7));t.setColor(Color.rgb(75,119,139));c.drawText("Сухий басейн зі сніговою крупою • без води • не танемо",w/2f,dp(116),t);
+        void persistSession(){if(freePlay)return;prefs.edit().putBoolean("snow_swim_session_active",true).putLong("snow_swim_session_day",sessionDay).putBoolean("snow_swim_session_weekend",sessionWeekend).putInt("snow_swim_session_strokes",strokes).putBoolean("snow_swim_session_expect_left",expectLeft).apply();}
+        void clearSession(){if(freePlay)return;prefs.edit().remove("snow_swim_session_active").remove("snow_swim_session_day").remove("snow_swim_session_weekend").remove("snow_swim_session_strokes").remove("snow_swim_session_expect_left").apply();}
+        @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();LinearGradient g=new LinearGradient(0,0,0,h,Color.rgb(166,225,248),Color.rgb(236,249,253),Shader.TileMode.CLAMP);p.setShader(g);c.drawRect(0,0,w,h,p);p.setShader(null);t.setTextAlign(Paint.Align.CENTER);t.setColor(Color.rgb(31,88,119));t.setTextSize(tx(7));c.drawText(freePlay?"ВІЛЬНЕ ТРЕНУВАННЯ • -8 °C":"КРИЖАНИЙ СПОРТЗАЛ • -8 °C",w/2f,dp(48),t);t.setTextSize(tx(22));c.drawText("СНІГОПЛАВАННЯ",w/2f,dp(88),t);t.setTextSize(tx(7));t.setColor(Color.rgb(75,119,139));c.drawText(freePlay?"Без ліміту • без зарахування дня":"Сухий басейн зі сніговою крупою • без води • не танемо",w/2f,dp(116),t);
             RectF pool=new RectF(dp(22),dp(155),w-dp(22),dp(500));p.setColor(Color.rgb(220,243,251));c.drawRoundRect(pool,dp(30),dp(30),p);stroke.setColor(Color.rgb(117,189,221));stroke.setStrokeWidth(dp(3));for(int i=1;i<4;i++)c.drawLine(pool.left,pool.top+pool.height()*i/4f,pool.right,pool.top+pool.height()*i/4f,stroke);for(int i=0;i<28;i++){float x=pool.left+dp(15)+(i*47%(int)Math.max(1,pool.width()-dp(30)));float y=pool.top+dp(15)+(i*83%(int)Math.max(1,pool.height()-dp(30)));p.setColor(Color.argb(150,255,255,255));c.drawCircle(x,y,dp(5+(i%3)),p);}float progress=Math.min(1f,strokes/8f),sx=pool.left+dp(55)+(pool.width()-dp(110))*progress;drawSnow(c,sx,pool.centerY()+dp(42),dp(34));t.setTextSize(tx(8));t.setColor(Color.rgb(49,105,132));c.drawText(done?"Доріжку пропливли":"Гребки "+strokes+"/8",w/2f,dp(535),t);t.setTextSize(tx(6.8f));c.drawText(feedback,w/2f,dp(565),t);
-            if(!done){float gap=dp(10),bw=(w-dp(54)-gap)/2f;left.set(dp(22),h-dp(105),dp(22)+bw,h-dp(35));right.set(left.right+gap,h-dp(105),w-dp(22),h-dp(35));p.setColor(expectLeft?Color.rgb(37,119,165):Color.rgb(116,170,196));c.drawRoundRect(left,dp(22),dp(22),p);p.setColor(!expectLeft?Color.rgb(37,119,165):Color.rgb(116,170,196));c.drawRoundRect(right,dp(22),dp(22),p);t.setTextSize(tx(8));t.setColor(Color.WHITE);c.drawText("ЛІВИЙ ГРЕБОК",left.centerX(),left.centerY()+dp(4),t);c.drawText("ПРАВИЙ ГРЕБОК",right.centerX(),right.centerY()+dp(4),t);finish.setEmpty();}else{finish.set(dp(34),h-dp(105),w-dp(34),h-dp(35));p.setColor(Color.rgb(37,119,165));c.drawRoundRect(finish,dp(22),dp(22),p);t.setTextSize(tx(8));t.setColor(Color.WHITE);c.drawText("ВИЛІЗТИ З БАСЕЙНУ",finish.centerX(),finish.centerY()+dp(4),t);}
+            if(!done){float gap=dp(10),bw=(w-dp(54)-gap)/2f;left.set(dp(22),h-dp(105),dp(22)+bw,h-dp(35));right.set(left.right+gap,h-dp(105),w-dp(22),h-dp(35));p.setColor(expectLeft?Color.rgb(37,119,165):Color.rgb(116,170,196));c.drawRoundRect(left,dp(22),dp(22),p);p.setColor(!expectLeft?Color.rgb(37,119,165):Color.rgb(116,170,196));c.drawRoundRect(right,dp(22),dp(22),p);t.setTextSize(tx(8));t.setColor(Color.WHITE);c.drawText("ЛІВИЙ ГРЕБОК",left.centerX(),left.centerY()+dp(4),t);c.drawText("ПРАВИЙ ГРЕБОК",right.centerX(),right.centerY()+dp(4),t);finish.setEmpty();}else{finish.set(dp(34),h-dp(105),w-dp(34),h-dp(35));p.setColor(Color.rgb(37,119,165));c.drawRoundRect(finish,dp(22),dp(22),p);t.setTextSize(tx(8));t.setColor(Color.WHITE);c.drawText(freePlay?"ЩЕ РАЗ / ВИЙТИ":"ВИЛІЗТИ З БАСЕЙНУ",finish.centerX(),finish.centerY()+dp(4),t);}
         }
         void drawSnow(Canvas c,float x,float y,float r){p.setColor(Color.WHITE);c.drawCircle(x,y,r,p);c.drawCircle(x,y-r*.78f,r*.72f,p);c.drawCircle(x,y-r*1.43f,r*.52f,p);p.setColor(Color.rgb(38,54,64));c.drawCircle(x-r*.14f,y-r*1.50f,r*.05f,p);c.drawCircle(x+r*.14f,y-r*1.50f,r*.05f,p);}
-        void stroke(boolean isLeft){if(done)return;if(isLeft!=expectLeft){feedback="Не двічі однією рукою — чергуй гребки.";SoundFx.play(ctx,SoundFx.WRONG);invalidate();return;}strokes++;expectLeft=!expectLeft;done=strokes>=8;persistSession();feedback=!done?"Добре. Тепер інша рука.":"Фініш! Сніг тримає форму.";SoundFx.play(ctx,SoundFx.SLED);if(done)countWeekend();invalidate();}
+        void stroke(boolean isLeft){if(done)return;if(isLeft!=expectLeft){feedback="Не двічі однією рукою — чергуй гребки.";SoundFx.play(ctx,SoundFx.WRONG);invalidate();return;}strokes++;expectLeft=!expectLeft;done=strokes>=8;persistSession();feedback=!done?"Добре. Тепер інша рука.":(freePlay?"Фініш! Можеш плисти ще раз.":"Фініш! Сніг тримає форму.");SoundFx.play(ctx,SoundFx.SLED);if(done&&!freePlay)countWeekend();invalidate();}
         void countWeekend(){
-            if(counted)return;counted=true;
+            if(freePlay||counted)return;counted=true;
             int weekendDone=Math.max(0,Math.min(2,prefs.getInt("school_year_weekend_done",0))),schoolDone=Math.max(0,Math.min(5,prefs.getInt("school_year_school_done",0)));
             long lastCompleted=prefs.getLong("school_player_last_completed_day",Long.MIN_VALUE);
             boolean can=sessionWeekend&&lastCompleted!=sessionDay&&lastCompleted<sessionDay&&weekendDone<2;
@@ -63,6 +73,7 @@ public class SnowSwimActivity extends Activity {
             SharedPreferences.Editor e=prefs.edit().putInt("school_year_weekend_done",weekendDone).putLong("school_player_last_completed_day",sessionDay).putLong("school_clock_last_completed_day",sessionDay).putInt("school_clock_days_lived",prefs.getInt("school_clock_days_lived",0)+1).putString("school_weekend_last","Снігоплавання").putInt("school_player_stage",yearDone?31:30).putLong("school_player_stage_day",sessionDay);
             if(yearDone)e.putBoolean("school_year_complete",true).putLong("school_year_complete_day",sessionDay);e.apply();clearSession();NotificationScheduler.onDayCompleted(ctx);feedback=yearDone?"Вихідний прожито. Рік 7/7 завершено.":"Вихідний прожито. Снігоплавання зараховано.";SoundFx.play(ctx,SoundFx.COMPLETE);
         }
-        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;performClick();float x=e.getX(),y=e.getY();if(!done){if(left.contains(x,y)){stroke(true);return true;}if(right.contains(x,y)){stroke(false);return true;}}else if(finish.contains(x,y)){Intent i=new Intent(ctx,IntegratedSchoolWeekActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);ctx.startActivity(i);((Activity)ctx).finish();return true;}return true;}@Override public boolean performClick(){super.performClick();return true;}
+        void restartFreePlay(){strokes=0;expectLeft=true;done=false;feedback="Ще одна доріжка • без ліміту.";invalidate();}
+        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;performClick();float x=e.getX(),y=e.getY();if(!done){if(left.contains(x,y)){stroke(true);return true;}if(right.contains(x,y)){stroke(false);return true;}}else if(finish.contains(x,y)){if(freePlay){restartFreePlay();return true;}Intent i=new Intent(ctx,IntegratedSchoolWeekActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);ctx.startActivity(i);((Activity)ctx).finish();return true;}return true;}@Override public boolean performClick(){super.performClick();return true;}
     }
 }
