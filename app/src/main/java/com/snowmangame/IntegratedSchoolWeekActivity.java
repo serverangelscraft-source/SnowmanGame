@@ -67,6 +67,14 @@ public class IntegratedSchoolWeekActivity extends Activity {
             if(from==LESSON2 && s==HOME)openOptionalIntegration();
         }
 
+        @Override void finishCountedDay(){
+            int before=stage;
+            super.finishCountedDay();
+            if(before!=stage){
+                ctx.startActivity(new Intent(ctx,FreeTimeActivity.class));
+            }
+        }
+
         void openOptionalIntegration(){
             if(launchingIntegration)return;
             int day=schoolOrdinal();
